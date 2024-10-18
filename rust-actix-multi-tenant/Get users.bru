@@ -1,0 +1,15 @@
+meta {
+  name: Get users
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:8080/users
+  body: none
+  auth: none
+}
+
+headers {
+  x-tenant-id : 444e1ce1-e489-448a-b843-0fbf1319d99f
+}

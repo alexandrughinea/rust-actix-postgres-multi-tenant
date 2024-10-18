@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "rust-actix-multi-tenant",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
