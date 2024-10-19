@@ -5,6 +5,12 @@ use aes_gcm::{
 use hex;
 use rand::Rng;
 
+fn generate_nonce() -> [u8; 12] {
+    let mut nonce = [0u8; 12];
+    rand::thread_rng().fill(&mut nonce);
+    nonce
+}
+
 fn decode_aes_hex_key(key_hex: &str) -> Result<Vec<u8>, String> {
     match hex::decode(key_hex) {
         Ok(key) => {
@@ -59,12 +65,6 @@ pub fn decrypt_aes_gcm(
         .map_err(|e| format!("Decryption failed: {:?}", e))?;
 
     String::from_utf8(plaintext).map_err(|e| e.into())
-}
-
-fn generate_nonce() -> [u8; 12] {
-    let mut nonce = [0u8; 12];
-    rand::thread_rng().fill(&mut nonce);
-    nonce
 }
 
 #[cfg(test)]
