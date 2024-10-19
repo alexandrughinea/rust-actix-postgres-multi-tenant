@@ -76,10 +76,10 @@ pub async fn get_pool_for_tenant(
     Ok(pool)
 }
 
-pub async fn cleanup_idle_tenant_pools(state: &web::Data<AppState>) {
+pub async fn cleanup_idle_tenant_pools(state: &web::Data<AppState>, idle_duration_in_seconds: u64) {
     let mut pools = state.pools.lock().unwrap();
     let now = Utc::now();
-    let idle_duration = Duration::from_secs(60 * 10); // 10 minutes of inactivity
+    let idle_duration = Duration::from_secs(idle_duration_in_seconds);
 
     pools.retain(|_, tenant_pool| {
         now.signed_duration_since(tenant_pool.last_accessed)

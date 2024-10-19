@@ -84,10 +84,11 @@ async fn main() -> std::io::Result<()> {
 
     tokio::spawn(async move {
         let cleanup_interval = Duration::from_secs(60 * 5); // 5 minutes
+        let idle_duration_in_seconds = 10 * 60; // 10 minutes
 
         loop {
             time::sleep(cleanup_interval).await;
-            cleanup_idle_tenant_pools(&state_clone).await;
+            cleanup_idle_tenant_pools(&state_clone, idle_duration_in_seconds).await;
         }
     });
 
