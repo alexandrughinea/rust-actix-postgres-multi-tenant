@@ -1,16 +1,14 @@
 mod utils;
 
-use crate::utils::{cleanup_idle_tenant_pools, get_pool_for_tenant, get_tenant_id_from_request};
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use crate::utils::{cleanup_idle_tenant_pools, create_user, get_users};
+use actix_web::{web, App, HttpServer};
 use chrono::{DateTime, Utc};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{FromRow, PgPool};
 use std::collections::HashMap;
 use std::env;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::time::{self, Duration};
 use uuid::Uuid;
@@ -44,12 +42,12 @@ struct User {
 }
 
 struct TenantPool {
-    pool: PgPool,
+    pool: Arc<PgPool>,
     last_accessed: DateTime<Utc>,
 }
 
 struct AppState {
-    pools: Arc<Mutex<HashMap<Uuid, TenantPool>>>,
+    pools: Arc<Mutex<HashMap<Uuid, Arc<Mutex<TenantPool>>>>>,
 }
 
 #[actix_web::main]
@@ -83,7 +81,7 @@ async fn main() -> std::io::Result<()> {
     let state_clone = state.clone();
 
     tokio::spawn(async move {
-        let cleanup_interval = Duration::from_secs(60 * 5); // 5 minutes
+        let cleanup_interval = Duration::from_secs(5 * 60); // 5 minutes
         let idle_duration_in_seconds = 10 * 60; // 10 minutes
 
         loop {
@@ -102,60 +100,4 @@ async fn main() -> std::io::Result<()> {
     .bind("127.0.0.1:8080")?
     .run()
     .await
-}
-
-async fn get_users(
-    req: HttpRequest,
-    state: web::Data<AppState>,
-    pool: web::Data<PgPool>,
-) -> impl Responder {
-    let tenant_id = match get_tenant_id_from_request(&req) {
-        Ok(id) => id,
-        Err(e) => return e,
-    };
-    let pool = match get_pool_for_tenant(&tenant_id, &state, &pool).await {
-        Ok(pool) => pool,
-        Err(e) => return e,
-    };
-
-    let users = match sqlx::query_as!(User, "SELECT * FROM users")
-        .fetch_all(&pool)
-        .await
-    {
-        Ok(users) => users,
-        Err(_) => return HttpResponse::InternalServerError().body("Error fetching users"),
-    };
-
-    HttpResponse::Ok().json(json!(users))
-}
-
-async fn create_user(
-    req: HttpRequest,
-    user: web::Json<User>,
-    state: web::Data<AppState>,
-    pool: web::Data<PgPool>,
-) -> impl Responder {
-    let tenant_id = match get_tenant_id_from_request(&req) {
-        Ok(id) => id,
-        Err(e) => return e,
-    };
-    let pool = match get_pool_for_tenant(&tenant_id, &state, &pool).await {
-        Ok(pool) => pool,
-        Err(e) => return e,
-    };
-
-    let user = sqlx::query_as::<_, User>(
-        r#"
-        INSERT INTO users (tenant_id, name)
-        VALUES ($1, $2)
-        RETURNING *
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(&user.name)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-
-    HttpResponse::Ok().json(json!(user))
 }

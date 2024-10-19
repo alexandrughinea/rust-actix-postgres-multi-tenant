@@ -5,8 +5,12 @@ use aes_gcm::aead::KeyInit;
 use chrono::Utc;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::env;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use uuid::Uuid;
+
+const DB_MAX_CONNECTIONS: u32 = 5;
+const DB_CONNECTION_IDLE_TIMEOUT_IN_SECONDS: u64 = 300;
 
 pub async fn fetch_tenant_db_credentials(
     pool: &PgPool,
@@ -30,15 +34,23 @@ pub async fn get_pool_for_tenant(
     tenant_id: &Uuid,
     state: &AppState,
     pool: &PgPool,
-) -> Result<PgPool, HttpResponse> {
+) -> Result<Arc<PgPool>, HttpResponse> {
     let mut pools = state.pools.lock().unwrap();
+    // Check if the tenant's pool already exists
     if let Some(tenant_pool) = pools.get_mut(&tenant_id) {
+        // Lock the Mutex to mutate the TenantPool
+        let mut tenant_pool = tenant_pool.lock().unwrap();
+
+        // Mutate the last accessed (visited) time
         tenant_pool.last_accessed = Utc::now();
-        return Ok(tenant_pool.pool.clone());
+
+        return Ok(Arc::clone(&tenant_pool.pool));
     }
+
+    // Fetch credentials for the tenant's database
     let credentials = fetch_tenant_db_credentials(&pool, &tenant_id)
         .await
-        .map_err(|_| HttpResponse::InternalServerError().body("Failed to create pool"))?;
+        .map_err(|_| HttpResponse::InternalServerError().body("Failed to fetch credentials"))?;
 
     let connection_str = format!(
         "postgres://{}:{}@localhost:5630/db_7090a5",
@@ -46,7 +58,10 @@ pub async fn get_pool_for_tenant(
     );
 
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(DB_MAX_CONNECTIONS)
+        .idle_timeout(Some(Duration::from_secs(
+            DB_CONNECTION_IDLE_TIMEOUT_IN_SECONDS,
+        )))
         .after_connect(move |conn, _| {
             Box::pin({
                 let role = credentials.db_user.clone();
@@ -60,20 +75,23 @@ pub async fn get_pool_for_tenant(
                 }
             })
         })
-        .idle_timeout(Some(Duration::from_secs(600))) // Set idle timeout for connections
         .connect(&connection_str)
         .await
-        .map_err(|_| HttpResponse::InternalServerError().body("Failed to create pool"))?;
+        .map_err(|_| {
+            HttpResponse::InternalServerError().body("Failed to create dedicated tenant pool.")
+        })?;
 
-    pools.insert(
-        *tenant_id,
-        TenantPool {
-            pool: pool.clone(),
-            last_accessed: Utc::now(),
-        },
-    );
+    // Create a new `TenantPool` struct with the newly created pool (wrapped in an Arc)
+    let tenant_pool = Arc::new(Mutex::new(TenantPool {
+        pool: Arc::new(pool),
+        last_accessed: Utc::now(),
+    }));
 
-    Ok(pool)
+    pools.insert(*tenant_id, Arc::clone(&tenant_pool));
+
+    // Lock the Mutex to access the pool
+    let tenant_pool = tenant_pool.lock().unwrap();
+    Ok(Arc::clone(&tenant_pool.pool)) // Clone the Arc to return
 }
 
 pub async fn cleanup_idle_tenant_pools(state: &web::Data<AppState>, idle_duration_in_seconds: u64) {
@@ -82,6 +100,8 @@ pub async fn cleanup_idle_tenant_pools(state: &web::Data<AppState>, idle_duratio
     let idle_duration = Duration::from_secs(idle_duration_in_seconds);
 
     pools.retain(|_, tenant_pool| {
+        let tenant_pool = tenant_pool.lock().unwrap(); // Lock the Mutex to access the pool
+
         now.signed_duration_since(tenant_pool.last_accessed)
             .num_seconds()
             < idle_duration.as_secs() as i64
