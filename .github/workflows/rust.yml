@@ -16,8 +16,8 @@ env:
   CARGO_TERM_COLOR: always
   SQLX_VERSION: 0.8.0
   SQLX_FEATURES: "rustls,postgres"
-  POSTGRES_USER: user
-  POSTGRES_USER_PWD: password
+  APP_USER: postgres_user
+  APP_USER_PWD: postgres_user_password
   APP_DB_NAME: rust-actix-postgres-multi-tenant
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
     services:
       postgres:
         # Docker Hub image
-        image: postgres:16
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
@@ -68,11 +68,11 @@ jobs:
           sudo apt-get install postgresql-client
 
           # Create the application user
-          CREATE_QUERY="CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_USER_PWD}';"
+          CREATE_QUERY="CREATE USER ${APP_USER} WITH PASSWORD '${APP_USER_PWD}';"
           PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${CREATE_QUERY}"
 
           # Grant create db privileges to the app user
-          GRANT_QUERY="ALTER USER ${POSTGRES_USER} CREATEDB;"
+          GRANT_QUERY="ALTER USER ${APP_USER} CREATEDB;"
           PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${GRANT_QUERY}"
 
       - name: Migrate database
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
@@ -145,11 +145,11 @@ jobs:
           sudo apt-get install postgresql-client
 
           # Create the application user
-          CREATE_QUERY="CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_USER_PWD}';"
+          CREATE_QUERY="CREATE USER ${APP_USER} WITH PASSWORD '${APP_USER_PWD}';"
           PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${CREATE_QUERY}"
 
           # Grant create db privileges to the app user
-          GRANT_QUERY="ALTER USER ${POSTGRES_USER} CREATEDB;"
+          GRANT_QUERY="ALTER USER ${APP_USER} CREATEDB;"
           PGPASSWORD="password" psql -U "postgres" -h "localhost" -c "${GRANT_QUERY}"
       - name: Migrate database
         run: SKIP_DOCKER=true ./scripts/init_db.sh

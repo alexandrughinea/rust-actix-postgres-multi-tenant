@@ -23,7 +23,7 @@ pub async fn fetch_tenant_db_credentials(
     settings: &Settings,
 ) -> Result<TenantCredentials, Box<dyn std::error::Error>> {
     let tenant = sqlx::query_as!(Tenant, "SELECT * FROM tenants WHERE id = $1", tenant_id)
-        .fetch_one(&*pool)
+        .fetch_one(pool)
         .await?;
 
     let decryption_key = settings.secret.aes256_gcm_secret_key.expose_secret();
@@ -127,7 +127,7 @@ pub async fn cleanup_idle_tenant_pools(state: &web::Data<AppState>, idle_duratio
             .num_seconds()
             < idle_duration.as_secs() as i64
         {
-            pools_to_retain.push(key.clone());
+            pools_to_retain.push(*key);
         }
     }
 
