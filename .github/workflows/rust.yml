@@ -23,7 +23,7 @@ jobs:
         ports:
           - 6379:6379
     env:
-      SQLX_VERSION: 0.6.3
+      SQLX_VERSION: 0.7.4
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Checkout repository
@@ -109,7 +109,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      SQLX_VERSION: a
+      SQLX_VERSION: 0.7.4
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Checkout repository
@@ -171,7 +171,7 @@ jobs:
         ports:
           - 6379:6379
     env:
-      SQLX_VERSION: 0.6.3
+      SQLX_VERSION: 0.7.4
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Checkout repository
