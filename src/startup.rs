@@ -15,7 +15,7 @@ use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::net::TcpListener;
-use std::sync::{Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time;
 use tracing::event;

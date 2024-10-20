@@ -5,7 +5,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use secrecy::ExposeSecret;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use std::sync::{Arc};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -122,7 +122,11 @@ pub async fn cleanup_idle_tenant_pools(state: &web::Data<AppState>, idle_duratio
     for (key, tenant_pool) in pools.iter() {
         let tenant_pool = tenant_pool.lock().await;
 
-        if now.signed_duration_since(tenant_pool.last_accessed).num_seconds() < idle_duration.as_secs() as i64 {
+        if now
+            .signed_duration_since(tenant_pool.last_accessed)
+            .num_seconds()
+            < idle_duration.as_secs() as i64
+        {
             pools_to_retain.push(key.clone());
         }
     }
@@ -146,4 +150,3 @@ pub fn get_tenant_id_from_request(req: &HttpRequest) -> Result<Uuid, HttpRespons
         None => Err(HttpResponse::BadRequest().body("x-tenant-id header missing")),
     }
 }
-    

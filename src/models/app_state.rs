@@ -1,7 +1,7 @@
 use crate::models::TenantPool;
 use std::collections::HashMap;
-use tokio::sync::{Mutex};
-use std::sync::{Arc};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 pub struct AppState {
