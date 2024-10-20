@@ -111,6 +111,7 @@ jobs:
     env:
       SQLX_VERSION: 0.7.4
       SQLX_FEATURES: "rustls,postgres"
+      SKIP_DOCKER: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -146,7 +147,7 @@ jobs:
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
-          SKIP_DOCKER=true ./scripts/init_db.sh
+          ./scripts/init_db.sh
 
       - name: Run clippy
         uses: actions-rs/clippy-check@v1
@@ -173,6 +174,7 @@ jobs:
     env:
       SQLX_VERSION: 0.7.4
       SQLX_FEATURES: "rustls,postgres"
+      SKIP_DOCKER: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -207,7 +209,7 @@ jobs:
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
-          SKIP_DOCKER=true ./scripts/init_db.sh
+          ./scripts/init_db.sh
 
       - name: Install Tarpaulin
         run: cargo install cargo-tarpaulin
