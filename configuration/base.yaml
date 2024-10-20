@@ -1,0 +1,34 @@
+application:
+  protocol: https
+  port: 8080
+  host: 0.0.0.0
+  cookie:
+    secure: true  # Allow HTTP for local development
+    content_security: "signed"  # Less strict for easier testing
+    domain: null  # Use default domain
+    name: "rust-actix-postgres-multi-tenant-cookie"
+    path: "/"
+    http_only: true
+    same_site: "lax"  # Less strict, allows for easier cross-site testing
+    session_ttl: 24
+
+secret:
+  argon2_salt: ""
+  argon2_secret_key: ""
+  aes256_gcm_secret_key: ""
+  hmac_secret: ""
+
+database:
+  host: "localhost"
+  port: 5432
+  database_name: "rust-actix-postgres-multi-tenant"
+  max_connections: 5
+  require_ssl: false
+
+redis:
+  host: "localhost"
+  port: 6379
+  database: 0
+  tls: false
+  pool_max_size: 16
+  pool_timeout_in_seconds: 5
