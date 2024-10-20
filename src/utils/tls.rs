@@ -1,15 +1,9 @@
-use crate::configuration::get_configuration;
 use crate::models::AppError;
-use actix_session::Session;
-use actix_web::Error;
 use openssl::pkey::{PKey, Private};
 use openssl::ssl::{SslAcceptor, SslAcceptorBuilder, SslFiletype, SslMethod};
 use secrecy::ExposeSecret;
-use sqlx::PgPool;
-use std::env;
 use std::fs::File;
 use std::io::Read;
-use uuid::Uuid;
 
 #[tracing::instrument(name = "Loading encrypted private key", skip(key_path))]
 fn load_encrypted_private_key(key_path: &str) -> Result<PKey<Private>, AppError> {
