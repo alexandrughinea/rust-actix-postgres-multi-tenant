@@ -16,11 +16,11 @@ application:
 debug: false
 
 secret:
-  argon2_salt: ${ARGON2_SALT},
-  argon2_secret_key: ${ARGON2_SECRET_KEY},
+  argon2_salt: ${SECRET_ARGON2_SALT},
+  argon2_key: ${SECRET_ARGON2_KEY},
 
-  aes256_gcm_secret_key: ${AES256_GCM_SECRET_KEY}
-  hmac_secret: ${HMAC_SECRET}  # This will be set via environment variable
+  aes256_gcm_key: ${SECRET_AES256_GCM_KEY}
+  hmac: ${SECRET_HMAC}  # This will be set via environment variable
 
 database:
   username: ${DB_USER}  # This will be set via environment variable

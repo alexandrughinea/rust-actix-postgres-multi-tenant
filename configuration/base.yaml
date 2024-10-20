@@ -14,9 +14,9 @@ application:
 
 secret:
   argon2_salt: ""
-  argon2_secret_key: ""
-  aes256_gcm_secret_key: ""
-  hmac_secret: ""
+  argon2_key: ""
+  aes256_gcm_key: ""
+  hmac: ""
 
 database:
   host: "localhost"

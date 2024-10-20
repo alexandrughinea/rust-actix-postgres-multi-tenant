@@ -102,7 +102,7 @@ async fn run(
     };
 
     let server = HttpServer::new(move || {
-        let hmac_secret_key = Key::from(settings.secret.hmac_secret.expose_secret().as_bytes());
+        let hmac_secret_key = Key::from(settings.secret.hmac.expose_secret().as_bytes());
 
         let application_host_origin = settings.application.host.clone();
         let application_cookie = settings.application.cookie.clone();

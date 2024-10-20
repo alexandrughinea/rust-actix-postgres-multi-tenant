@@ -26,7 +26,7 @@ pub async fn fetch_tenant_db_credentials(
         .fetch_one(pool)
         .await?;
 
-    let decryption_key = settings.secret.aes256_gcm_secret_key.expose_secret();
+    let decryption_key = settings.secret.aes256_gcm_key.expose_secret();
     let db_password_encrypted = tenant.db_password_encrypted.unwrap();
     let db_password_plaintext = decrypt_aes_gcm(decryption_key, db_password_encrypted.as_str())?;
 

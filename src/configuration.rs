@@ -104,10 +104,10 @@ pub struct RedisSettings {
 #[derive(Deserialize, Clone)]
 pub struct SecretSettings {
     pub argon2_salt: SecretString,
-    pub argon2_secret_key: SecretString,
+    pub argon2_key: SecretString,
 
-    pub hmac_secret: SecretString,
-    pub aes256_gcm_secret_key: SecretString,
+    pub hmac: SecretString,
+    pub aes256_gcm_key: SecretString,
 }
 
 pub enum Environment {
