@@ -1,0 +1,35 @@
+application:
+  protocol: https
+  certificate: #HTTPS (TLS) certificate
+    cert_path: ${TLS_CERTIFICATE_PATH}
+    key_path: ${TLS_CERTIFICATE_KEY_PATH}
+    is_key_encrypted: true
+  cookie:
+    secure: true  # Require HTTPS (TLS)
+    content_security: "private"  # Highest level of security
+    domain: "example.com"  # Specify your domain
+    name: "__Host-session"  # Prefix with __Host- for added security
+    http_only: true
+    same_site: "strict"  # Prevent CSRF and offer the highest security
+    session_ttl: 8
+
+debug: false
+
+secret:
+  argon2_salt: ${SECRET_ARGON2_SALT},
+  argon2_key: ${SECRET_ARGON2_KEY},
+
+  aes256_gcm_key: ${SECRET_AES256_GCM_KEY}
+  hmac: ${SECRET_HMAC}  # This will be set via environment variable
+
+database:
+  username: ${DB_USER}  # This will be set via environment variable
+  password: ${DB_PASSWORD}  # This will be set via environment variable
+  host: ${DB_HOST}  # This could be a cloud database instance
+  require_ssl: true
+
+redis:
+  username: ${REDIS_USER}  # This will be set via environment variable
+  password: ${REDIS_PASSWORD}  # This will be set via environment variable
+  host: ${REDIS_HOST}  # This could be a cloud database instance
+  tls: true

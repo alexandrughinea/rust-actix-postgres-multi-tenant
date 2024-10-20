@@ -30,7 +30,7 @@ pub fn encrypt_aes_gcm(
     plaintext: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let decoded_aes_hex_key = decode_aes_hex_key(key_hex)?;
-    let cipher = Aes256Gcm::new_from_slice(&*decoded_aes_hex_key)
+    let cipher = Aes256Gcm::new_from_slice(&decoded_aes_hex_key)
         .map_err(|e| format!("Failed to create cipher: {:?}", e))?;
 
     let nonce = generate_nonce();
@@ -57,7 +57,7 @@ pub fn decrypt_aes_gcm(
 
     let (nonce, ciphertext) = encrypted_bytes.split_at(12);
 
-    let cipher = Aes256Gcm::new_from_slice(&*decoded_aes_hex_key)
+    let cipher = Aes256Gcm::new_from_slice(&decoded_aes_hex_key)
         .map_err(|e| format!("Failed to create cipher: {:?}", e))?;
 
     let plaintext = cipher

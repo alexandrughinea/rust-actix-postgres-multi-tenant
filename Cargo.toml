@@ -3,15 +3,44 @@ name = "rust-actix-postgres-multi-tenant"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "rust-actix-postgres-multi-tenant"
+
 [dependencies]
-dotenv = "0.15"
-sqlx = { version = "0.8", features = ["runtime-tokio","postgres", "uuid", "chrono", "json"] }
+openssl = "0.10"
 actix-web = { version = "4.9", features = ["openssl"] }
+actix-session = { version = "0.10.1", features = [
+    "cookie-session"
+] }
+actix-cors = { version = "0.7" }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
 tokio = { version = "1.40", features = ["macros", "rt-multi-thread"] }
+config = "0.14"
 uuid = { version = "1.10", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rand = "0.8.5"
-aes-gcm = "0.11.0-pre.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "std",
+    "env-filter",
+    "registry",
+    'json',
+    'tracing-log',
+] }
+tracing-bunyan-formatter = "0.3"
+tracing-log = "0.2.0"
+tracing-actix-web = "0.7"
+secrecy = { version = "0.10", features = ["serde"] }
+argon2 = "0.5.3"
+anyhow = "1.0.89"
+thiserror = "1.0.64"
+hmac = "0.12"
+aes-gcm = "0.10.3"
 hex = "0.4.3"
+rand = "0.8.5"

@@ -179,8 +179,8 @@ Look for .env and enable it accordingly.
 
  - `POST` request to create a user for a specific tenant:
   ```bash
-  curl -X POST http://localhost:8080/users \
-       -H "x-tenant-id: 123e4567-e89b-12d3-a456-426614174000" \
+  curl -X POST https://localhost:8080/v1/internal/users \
+       -H "x-tenant-id: 1b7db059-91bc-42d6-9d0e-93ca03d644a8" \
        -H "Content-Type: application/json" \
        -d '{
              "name": "John Doe",
@@ -189,9 +189,10 @@ Look for .env and enable it accordingly.
 
  - `GET` request to retrieve users of a specific tenant:
   ```bash
-  curl -X GET http://localhost:8080/users \
-     -H "x-tenant-id: 123e4567-e89b-12d3-a456-426614174000"
+  curl -X GET https://localhost:8080/v1/internal/users \
+     -H "x-tenant-id: 1b7db059-91bc-42d6-9d0e-93ca03d644a8"
   ```
+ Be sure to add an existing and correct tenant unique identifier in the headers (must be UUID v4)
 
 ## Disclaimer
 
