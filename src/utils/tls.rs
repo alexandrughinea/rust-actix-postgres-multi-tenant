@@ -1,7 +1,6 @@
 use crate::models::AppError;
 use openssl::pkey::{PKey, Private};
 use openssl::ssl::{SslAcceptor, SslAcceptorBuilder, SslFiletype, SslMethod};
-use secrecy::ExposeSecret;
 use std::fs::File;
 use std::io::Read;
 
