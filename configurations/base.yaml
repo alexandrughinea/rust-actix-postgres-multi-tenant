@@ -2,6 +2,7 @@ application:
   protocol: https
   port: 8080
   host: 0.0.0.0
+  certificate:
   cookie:
     secure: true  # Allow HTTP for local development
     content_security: "signed"  # Less strict for easier testing
@@ -12,7 +13,7 @@ application:
     same_site: "lax"  # Less strict, allows for easier cross-site testing
     session_ttl: 24
 
-secret:
+secrets:
   argon2_salt: ""
   argon2_key: ""
   aes256_gcm_key: ""

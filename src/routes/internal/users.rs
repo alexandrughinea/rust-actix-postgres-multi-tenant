@@ -1,7 +1,7 @@
-use crate::configuration::Settings;
+use crate::configurations::Configuration;
 use crate::models::{AppState, User};
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -14,8 +14,8 @@ pub async fn get_users(
     req: HttpRequest,
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
-    settings: web::Data<Settings>,
-) -> impl Responder {
+    settings: web::Data<Configuration>,
+) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
         Err(e) => return e,
@@ -41,8 +41,8 @@ pub async fn create_user(
     user: web::Json<User>,
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
-    settings: web::Data<Settings>,
-) -> impl Responder {
+    settings: web::Data<Configuration>,
+) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
         Err(e) => return e,

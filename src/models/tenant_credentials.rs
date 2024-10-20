@@ -1,3 +1,4 @@
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -5,5 +6,5 @@ use sqlx::FromRow;
 pub struct TenantCredentials {
     pub db_user: String,
     #[serde(skip)]
-    pub db_password: String,
+    pub db_password: SecretString,
 }

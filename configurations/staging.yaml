@@ -1,0 +1,33 @@
+application:
+  protocol: https
+  cookie:
+    secure: true  # Require HTTPS (TLS)
+    content_security: "private"  # Highest level of security
+    domain: ${APP_APPLICATION__COOKIE__DOMAIN}
+    name: "__Host-session"  # Prefix with __Host- for added security
+    http_only: true
+    same_site: "strict"  # Prevent CSRF and offer the highest security
+    session_ttl: 8
+
+debug: false
+
+secrets:
+  argon2_salt: ${APP_SECRETS__ARGON2_SALT},
+  argon2_key: ${APP_SECRETS__ARGON2_KEY},
+
+  aes256_gcm_key: ${APP_SECRETS__AES256_GCM_KEY}
+  hmac: ${APP_SECRETS__HMAC}
+
+database:
+  port: ${APP_DATABASE__PORT}
+  host: ${APP_DATABASE__HOST}
+  database_name: ${APP_DATABASE__DATABASE_NAME}
+  username: ${APP_DATABASE__USERNAME}
+  password: ${APP_DATABASE__PASSWORD}
+  require_ssl: true
+
+redis:
+  username: ${APP_REDIS__USER}
+  password: ${APP_REDIS__PASSWORD}
+  host: ${APP_REDIS__HOST}
+  tls: true

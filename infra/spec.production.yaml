@@ -1,0 +1,64 @@
+#! spec-production.yaml
+name: multi-tenant-platform
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+region: fra
+
+services:
+  - name: multi-tenant-production
+    envs:
+      - key: APP_SECRETS__ARGON2_SALT
+        scope: RUN_TIME
+      - key: APP_SECRETS__ARGON2_KEY
+        scope: RUN_TIME
+      - key: APP_SECRETS__AES256_GCM_KEY
+        scope: RUN_TIME
+      - key: APP_SECRETS__HMAC
+        scope: RUN_TIME
+      - key: APP_ENVIRONMENT
+        scope: RUN_TIME
+        value: production
+      - key: APP_APPLICATION__BASE_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: APP_DATABASE__USERNAME
+        scope: RUN_TIME
+        value: ${production.USERNAME}
+      - key: APP_DATABASE__PASSWORD
+        scope: RUN_TIME
+        value: ${production.PASSWORD}
+      - key: APP_DATABASE__HOST
+        scope: RUN_TIME
+        value: ${production.HOSTNAME}
+      - key: APP_DATABASE__PORT
+        scope: RUN_TIME
+        value: ${production.PORT}
+      - key: APP_DATABASE__DATABASE_NAME
+        scope: RUN_TIME
+        value: ${production.DATABASE}
+    dockerfile_path: Dockerfile
+    source_dir: .
+    github:
+      branch: main
+      deploy_on_push: true
+      repo: alexandrughinea/rust-actix-postgres-multi-tenant
+    health_check:
+      http_path: /health_check
+    http_port: 8080
+    instance_count: 2
+    instance_size_slug: basic-s
+    routes:
+      - path: /
+        preserve_path_prefix: true
+
+databases:
+  - cluster_name: production-cluster
+    name: production
+    db_name: production
+    engine: PG
+    version: "16"
+    production: true
+    size: db-s-1vcpu-1gb
+    num_nodes: 2

@@ -1,0 +1,58 @@
+#! spec-staging.yaml
+name: multi-tenant-platform
+region: fra
+services:
+  - name: multi-tenant-staging
+    envs:
+      - key: APP_SECRETS__ARGON2_SALT
+        scope: RUN_TIME
+      - key: APP_SECRETS__ARGON2_KEY
+        scope: RUN_TIME
+      - key: APP_SECRETS__AES256_GCM_KEY
+        scope: RUN_TIME
+      - key: APP_SECRETS__HMAC
+        scope: RUN_TIME
+      - key: APP_ENVIRONMENT
+        scope: RUN_TIME
+        value: production
+      - key: APP_APPLICATION__BASE_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: APP_DATABASE__USERNAME
+        scope: RUN_TIME
+        value: ${staging.USERNAME}
+      - key: APP_DATABASE__PASSWORD
+        scope: RUN_TIME
+        value: ${staging.PASSWORD}
+      - key: APP_DATABASE__HOST
+        scope: RUN_TIME
+        value: ${staging.HOSTNAME}
+      - key: APP_DATABASE__PORT
+        scope: RUN_TIME
+        value: ${staging.PORT}
+      - key: APP_DATABASE__DATABASE_NAME
+        scope: RUN_TIME
+        value: ${staging.DATABASE}
+    dockerfile_path: Dockerfile
+    source_dir: .
+    github:
+      branch: main
+      deploy_on_push: true
+      repo: alexandrughinea/rust-actix-postgres-multi-tenant
+    health_check:
+      http_path: /health_check
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    routes:
+      - path: /
+        preserve_path_prefix: true
+
+databases:
+  - cluster_name: staging-cluster
+    name: staging
+    db_name: staging
+    engine: PG
+    version: "16"
+    production: true
+    num_nodes: 1

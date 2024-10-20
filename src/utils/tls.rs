@@ -29,8 +29,8 @@ pub fn build_tls_config(
     tracing::info!("Building TLS configuration");
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;
 
-    // Set the certificate chain file
-    tracing::info!("Setting certificate chain file: {}", cert_path);
+    // Set the certs chain file
+    tracing::info!("Setting certs chain file: {}", cert_path);
     builder.set_certificate_chain_file(cert_path)?;
 
     // Set the private key

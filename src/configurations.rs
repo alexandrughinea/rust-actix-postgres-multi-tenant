@@ -3,26 +3,55 @@ use actix_web::cookie::SameSite;
 use config::{Config, ConfigError, File};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
+use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
 use std::env;
 
+pub fn get_configuration() -> Result<Configuration, ConfigError> {
+    let base_path = env::current_dir().expect("Failed to determine the current directory");
+    let configuration_directory = base_path.join("configurations");
+
+    // Detect the running environment.
+    // Default to `development` if unspecified.
+    let environment: Environment = env::var("APP_ENVIRONMENT")
+        .unwrap_or_else(|_| "development".into())
+        .try_into()
+        .expect("Failed to parse APP_ENVIRONMENT.");
+    let environment_filename = format!("{}.yaml", environment.as_str());
+    let configurations = Config::builder()
+        .add_source(File::from(configuration_directory.join("base.yaml")))
+        .add_source(File::from(
+            configuration_directory.join(environment_filename),
+        ))
+        // Add in configurations from environment variables (with a prefix of APP and '__' as separator)
+        // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port`
+        .add_source(
+            config::Environment::with_prefix("APP")
+                .prefix_separator("_")
+                .separator("__"),
+        )
+        .build()?;
+
+    configurations.try_deserialize::<Configuration>()
+}
+
 #[derive(Deserialize, Clone)]
-pub struct Settings {
+pub struct Configuration {
     pub debug: bool,
-    pub database: DatabaseSettings,
-    pub application: ApplicationSettings,
-    pub redis: RedisSettings,
-    pub secret: SecretSettings,
+    pub application: ApplicationConfiguration,
+    pub database: DatabaseConfiguration,
+    pub redis: RedisConfiguration,
+    pub secrets: SecretsConfiguration,
     pub frontend_url: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
-pub struct ApplicationSettings {
+pub struct ApplicationConfiguration {
     pub port: u16,
     pub host: String,
-    pub cookie: CookieSettings,
-    pub certificate: CertificateSettings,
+    pub cookie: CookieConfiguration,
+    pub certificate: Option<CertificateConfiguration>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -52,22 +81,22 @@ impl TryFrom<CookieSameSiteWrapper> for SameSite {
     fn try_from(wrapper: CookieSameSiteWrapper) -> Result<Self, Self::Error> {
         match wrapper.0.to_lowercase().as_str() {
             "lax" => Ok(SameSite::Lax),
-            "signed" => Ok(SameSite::Strict),
+            "strict" => Ok(SameSite::Strict),
             "none" => Ok(SameSite::None),
             _ => Err(format!("Invalid SameSite value: {}", wrapper.0)),
         }
     }
 }
 
-#[derive(Deserialize, Clone)]
-pub struct CertificateSettings {
+#[derive(Deserialize, Clone, Debug)]
+pub struct CertificateConfiguration {
     pub cert_path: String,
     pub key_path: String,
     pub is_key_encrypted: bool,
 }
 
-#[derive(Deserialize, Clone)]
-pub struct CookieSettings {
+#[derive(Deserialize, Clone, Debug)]
+pub struct CookieConfiguration {
     pub secure: bool,
     pub content_security: CookieContentSecurityWrapper,
     pub domain: Option<String>,
@@ -78,31 +107,36 @@ pub struct CookieSettings {
     pub session_ttl: i64,
 }
 
-#[derive(Deserialize, Clone)]
-pub struct DatabaseSettings {
+#[derive(Deserialize, Clone, Debug)]
+pub struct DatabaseConfiguration {
     pub username: String,
     pub password: SecretString,
-    pub port: u16,
     pub host: String,
     pub database_name: String,
     pub require_ssl: bool,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub port: u16,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub max_connections: u32,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct RedisSettings {
+pub struct RedisConfiguration {
     pub username: Option<String>,
     pub password: Option<String>,
-    pub port: u16,
     pub host: String,
-    pub database_index: Option<u8>,
     pub tls: bool,
+    pub database_index: Option<u8>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub port: u16,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub pool_max_size: usize,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub pool_timeout_in_seconds: u64,
 }
 
-#[derive(Deserialize, Clone)]
-pub struct SecretSettings {
+#[derive(Deserialize, Clone, Debug)]
+pub struct SecretsConfiguration {
     pub argon2_salt: SecretString,
     pub argon2_key: SecretString,
 
@@ -112,6 +146,7 @@ pub struct SecretSettings {
 
 pub enum Environment {
     Development,
+    Staging,
     Production,
 }
 
@@ -119,6 +154,7 @@ impl Environment {
     pub fn as_str(&self) -> &'static str {
         match self {
             Environment::Development => "development",
+            Environment::Staging => "staging",
             Environment::Production => "production",
         }
     }
@@ -130,40 +166,17 @@ impl TryFrom<String> for Environment {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.to_lowercase().as_str() {
             "development" => Ok(Self::Development),
+            "staging" => Ok(Self::Staging),
             "production" => Ok(Self::Production),
             other => Err(format!(
-                "{} is not a supported environment. Use either `local` or `production`.",
+                "{} is not a supported environment. Use either `development`, `staging` or `production`.",
                 other
             )),
         }
     }
 }
 
-pub fn get_configuration() -> Result<Settings, ConfigError> {
-    let base_path = env::current_dir().expect("Failed to determine the current directory");
-    let configuration_directory = base_path.join("configuration");
-
-    // Detect the running environment.
-    // Default to `development` if unspecified.
-    let environment: Environment = env::var("APP_ENVIRONMENT")
-        .unwrap_or_else(|_| "development".into())
-        .try_into()
-        .expect("Failed to parse APP_ENVIRONMENT.");
-    let environment_filename = format!("{}.yaml", environment.as_str());
-    let settings = Config::builder()
-        .add_source(File::from(configuration_directory.join("base.yaml")))
-        .add_source(File::from(
-            configuration_directory.join(environment_filename),
-        ))
-        // Add in settings from environment variables (with a prefix of APP and '__' as separator)
-        // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port`
-        .add_source(config::Environment::with_prefix("app").separator("__"))
-        .build()?;
-
-    settings.try_deserialize::<Settings>()
-}
-
-impl DatabaseSettings {
+impl DatabaseConfiguration {
     pub fn with_db(&self) -> PgConnectOptions {
         let options = self.without_db().database(&self.database_name);
 
@@ -189,7 +202,7 @@ impl DatabaseSettings {
     }
 }
 
-impl RedisSettings {
+impl RedisConfiguration {
     pub fn redis_url(&self) -> String {
         let protocol = if self.tls { "rediss" } else { "redis" };
 

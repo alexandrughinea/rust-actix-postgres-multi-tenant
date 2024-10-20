@@ -1,0 +1,5 @@
+[advisories]
+# Ignore advisories for specific crates
+ignore = [
+    { name = "yaml-rust", versions = "0.4.5" }
+]

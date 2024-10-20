@@ -1,13 +1,13 @@
 #![allow(async_fn_in_trait)]
 
-use rust_actix_postgres_multi_tenant::configuration::get_configuration;
+use rust_actix_postgres_multi_tenant::configurations::get_configuration;
 use rust_actix_postgres_multi_tenant::startup::Application;
 use rust_actix_postgres_multi_tenant::telemetry::init_startup_telemetry;
 use tracing::event;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let settings = get_configuration().expect("Failed to read app settings!");
+    let settings = get_configuration().expect("Failed to read app configurations!");
 
     init_startup_telemetry(&settings);
 

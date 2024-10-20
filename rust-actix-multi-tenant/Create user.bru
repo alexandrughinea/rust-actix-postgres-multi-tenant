@@ -5,13 +5,13 @@ meta {
 }
 
 post {
-  url: https://localhost:8080/v1/internal/users
+  url: {{host}}/v1/internal/users
   body: json
   auth: none
 }
 
 headers {
-  x-tenant-id: 1b7db059-91bc-42d6-9d0e-93ca03d644a8
+  x-tenant-id: {{tenant_id}}
 }
 
 body:json {

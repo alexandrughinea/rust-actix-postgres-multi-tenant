@@ -1,4 +1,4 @@
-use crate::configuration::Settings;
+use crate::configurations::Configuration;
 use tracing::{Level, Subscriber};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -57,7 +57,7 @@ pub fn init_basic_logging() {
     }
 }
 
-pub fn init_startup_telemetry(settings: &Settings) {
+pub fn init_startup_telemetry(settings: &Configuration) {
     let name = env!("CARGO_PKG_NAME").to_string();
     let subscriber = get_subscriber(&name, settings.debug, std::io::stdout);
     init_subscriber(subscriber);

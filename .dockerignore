@@ -3,4 +3,4 @@ target/
 tests/
 Dockerfile
 scripts/
-migrations/
+certs/

@@ -1,7 +1,7 @@
-use crate::configuration::Settings;
+use crate::configurations::Configuration;
 use crate::models::AppState;
 use crate::routes::{health_check, internal};
-use crate::utils::{build_tls_config, cleanup_idle_tenant_pools};
+use crate::utils::cleanup_idle_tenant_pools;
 use actix_cors::Cors;
 use actix_session::config::PersistentSession;
 use actix_session::storage::CookieSessionStore;
@@ -28,7 +28,7 @@ pub struct Application {
 
 impl Application {
     pub async fn build(
-        configuration: Settings,
+        configuration: Configuration,
         test_pool: Option<PgPool>,
     ) -> Result<Self, std::io::Error> {
         let connection_pool = if let Some(pool) = test_pool {
@@ -78,7 +78,7 @@ impl Application {
 async fn run(
     listener: TcpListener,
     db_pool: PgPool,
-    settings: Settings,
+    settings: Configuration,
 ) -> Result<Server, std::io::Error> {
     let settings_data = Data::new(settings.clone());
     let app_state_data = Data::new(AppState {
@@ -86,23 +86,9 @@ async fn run(
     });
     // Database connection pool application state
     let database_pool_data = Data::new(db_pool);
-    // TLS configuration
-    let tls_acceptor_builder = match build_tls_config(
-        &settings.application.certificate.cert_path,
-        &settings.application.certificate.key_path,
-        &settings.application.certificate.is_key_encrypted,
-    ) {
-        Ok(result) => result,
-        Err(error) => {
-            let message = format!("Failed to build TLS config: {:?}", error);
-            tracing::error!(message);
-
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, message));
-        }
-    };
 
     let server = HttpServer::new(move || {
-        let hmac_secret_key = Key::from(settings.secret.hmac.expose_secret().as_bytes());
+        let hmac_secret_key = Key::from(settings.secrets.hmac.expose_secret().as_bytes());
 
         let application_host_origin = settings.application.host.clone();
         let application_cookie = settings.application.cookie.clone();
@@ -160,7 +146,7 @@ async fn run(
             )
             .wrap(TracingLogger::default())
     })
-    .listen_openssl(listener, tls_acceptor_builder)?
+    .listen(listener)?
     .run();
 
     Ok(server)

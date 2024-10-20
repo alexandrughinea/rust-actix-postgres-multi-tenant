@@ -1,9 +1,9 @@
-use crate::configuration::Settings;
+use crate::configurations::{Configuration, DatabaseConfiguration};
 use crate::models::{AppState, Tenant, TenantCredentials, TenantPool};
 use crate::utils::decrypt_aes_gcm;
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
-use secrecy::ExposeSecret;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,19 +20,19 @@ const DB_CONNECTION_IDLE_TIMEOUT_IN_SECONDS: u64 = 300;
 pub async fn fetch_tenant_db_credentials(
     tenant_id: &Uuid,
     pool: &PgPool,
-    settings: &Settings,
+    settings: &Configuration,
 ) -> Result<TenantCredentials, Box<dyn std::error::Error>> {
     let tenant = sqlx::query_as!(Tenant, "SELECT * FROM tenants WHERE id = $1", tenant_id)
         .fetch_one(pool)
         .await?;
 
-    let decryption_key = settings.secret.aes256_gcm_key.expose_secret();
+    let decryption_key = settings.secrets.aes256_gcm_key.expose_secret();
     let db_password_encrypted = tenant.db_password_encrypted.unwrap();
     let db_password_plaintext = decrypt_aes_gcm(decryption_key, db_password_encrypted.as_str())?;
 
     Ok(TenantCredentials {
         db_user: tenant.db_user,
-        db_password: db_password_plaintext,
+        db_password: SecretString::from(db_password_plaintext),
     })
 }
 
@@ -44,7 +44,7 @@ pub async fn get_pool_for_tenant(
     tenant_id: &Uuid,
     state: &AppState,
     pool: &PgPool,
-    settings: &Settings,
+    settings: &Configuration,
 ) -> Result<Arc<PgPool>, HttpResponse> {
     let mut pools = state.pools.lock().await;
     // Check if the tenant's pool already exists
@@ -62,14 +62,17 @@ pub async fn get_pool_for_tenant(
     let credentials = fetch_tenant_db_credentials(tenant_id, pool, settings)
         .await
         .map_err(|_| HttpResponse::InternalServerError().body("Failed to fetch credentials"))?;
-    let connection_str = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        credentials.db_user,
-        credentials.db_password,
-        settings.database.host,
-        settings.database.port,
-        settings.database.database_name
-    );
+
+    let database_settings = DatabaseConfiguration {
+        username: credentials.db_user.clone(),
+        password: credentials.db_password,
+        port: settings.database.port,
+        host: settings.database.host.clone(),
+        database_name: settings.database.database_name.clone(),
+        require_ssl: settings.database.require_ssl,
+        max_connections: settings.database.max_connections,
+    };
+    let connect_options = database_settings.with_db();
 
     let pool = PgPoolOptions::new()
         .max_connections(DB_MAX_CONNECTIONS)
@@ -89,7 +92,7 @@ pub async fn get_pool_for_tenant(
                 }
             })
         })
-        .connect(&connection_str)
+        .connect_with(connect_options)
         .await
         .map_err(|_| {
             HttpResponse::InternalServerError().body("Failed to create dedicated tenant pool.")
