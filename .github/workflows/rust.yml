@@ -74,7 +74,7 @@ jobs:
 
       - name: Check sqlx-data.json is up-to-date
         run: |
-          cargo sqlx prepare -- --bin rust-actix-postgres-multi-tenant
+          cargo sqlx prepare --check -- --bin rust-actix-postgres-multi-tenant
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
@@ -209,7 +209,10 @@ jobs:
           sudo apt-get install libpq-dev -y
           SKIP_DOCKER=true ./scripts/init_db.sh
 
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          args: '--ignore-tests --avoid-cfg-tarpaulin'
+      - name: Install Tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run Tarpaulin
+        run: |
+          cargo tarpaulin --ignore-tests --avoid-cfg-tarpaulin --out Xml
+

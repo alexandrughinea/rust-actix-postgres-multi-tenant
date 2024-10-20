@@ -26,7 +26,7 @@ pub async fn get_users(
     };
 
     let users = match sqlx::query_as!(User, "SELECT * FROM users")
-        .fetch_all(&*tenant_pool.as_ref())
+        .fetch_all(tenant_pool.as_ref())
         .await
     {
         Ok(users) => users,
@@ -61,7 +61,7 @@ pub async fn create_user(
     )
     .bind(tenant_id)
     .bind(&user.name)
-    .fetch_one(&*pool.as_ref())
+    .fetch_one(pool.as_ref())
     .await
     .unwrap();
 

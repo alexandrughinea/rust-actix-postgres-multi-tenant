@@ -27,7 +27,7 @@ pub async fn fetch_tenant_db_credentials(
 
     let decryption_key = settings.secret.aes256_gcm_secret_key.expose_secret();
     let db_password_encrypted = tenant.db_password_encrypted.unwrap();
-    let db_password_plaintext = decrypt_aes_gcm(&decryption_key, db_password_encrypted.as_str())?;
+    let db_password_plaintext = decrypt_aes_gcm(decryption_key, db_password_encrypted.as_str())?;
 
     Ok(TenantCredentials {
         db_user: tenant.db_user,
@@ -47,7 +47,7 @@ pub async fn get_pool_for_tenant(
 ) -> Result<Arc<PgPool>, HttpResponse> {
     let mut pools = state.pools.lock().unwrap();
     // Check if the tenant's pool already exists
-    if let Some(tenant_pool) = pools.get_mut(&tenant_id) {
+    if let Some(tenant_pool) = pools.get_mut(tenant_id) {
         // Lock the Mutex to mutate the TenantPool
         let mut tenant_pool = tenant_pool.lock().unwrap();
 
@@ -58,7 +58,7 @@ pub async fn get_pool_for_tenant(
     }
 
     // Fetch credentials for the tenant's database
-    let credentials = fetch_tenant_db_credentials(&tenant_id, &pool, &settings)
+    let credentials = fetch_tenant_db_credentials(tenant_id, pool, settings)
         .await
         .map_err(|_| HttpResponse::InternalServerError().body("Failed to fetch credentials"))?;
     let connection_str = format!(

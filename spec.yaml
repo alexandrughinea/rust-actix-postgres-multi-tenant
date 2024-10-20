@@ -17,19 +17,19 @@ services:
         value: ${APP_URL}
       - key: APP_DATABASE__USERNAME
         scope: RUN_TIME
-        value: ${newsletter.USERNAME}
+        value: ${rust_actix_postgres_multi_tenant.USERNAME}
       - key: APP_DATABASE__PASSWORD
         scope: RUN_TIME
-        value: ${newsletter.PASSWORD}
+        value: ${rust_actix_postgres_multi_tenant.PASSWORD}
       - key: APP_DATABASE__HOST
         scope: RUN_TIME
-        value: ${newsletter.HOSTNAME}
+        value: ${rust_actix_postgres_multi_tenant.HOSTNAME}
       - key: APP_DATABASE__PORT
         scope: RUN_TIME
-        value: ${newsletter.PORT}
+        value: ${rust_actix_postgres_multi_tenant.PORT}
       - key: APP_DATABASE__DATABASE_NAME
         scope: RUN_TIME
-        value: ${newsletter.DATABASE}
+        value: ${rust_actix_postgres_multi_tenant.DATABASE}
     # Relative to the repository root
     dockerfile_path: Dockerfile
     source_dir: .
@@ -62,7 +62,7 @@ databases:
   # PG = Postgres
   - engine: PG
     # Database name
-    name: newsletter
+    name: rust_actix_postgres_multi_tenant
     # Again, let's keep the bill lean
     num_nodes: 1
     size: db-s-dev-database

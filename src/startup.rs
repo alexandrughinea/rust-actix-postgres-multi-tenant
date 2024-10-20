@@ -111,7 +111,7 @@ async fn run(
             .allowed_origin_fn(move |origin, _req_head| {
                 origin
                     .as_bytes()
-                    .ends_with(&application_host_origin.as_bytes())
+                    .ends_with(application_host_origin.as_bytes())
             })
             .allowed_methods(vec!["GET", "POST", "PUT"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
