@@ -57,9 +57,9 @@ pub fn init_basic_logging() {
     }
 }
 
-pub fn init_startup_telemetry(settings: &Configuration) {
+pub fn init_startup_telemetry(configuration: &Configuration) {
     let name = env!("CARGO_PKG_NAME").to_string();
-    let subscriber = get_subscriber(&name, settings.debug, std::io::stdout);
+    let subscriber = get_subscriber(&name, configuration.debug, std::io::stdout);
     init_subscriber(subscriber);
 }
 

@@ -25,7 +25,7 @@ pub fn get_configuration() -> Result<Configuration, ConfigError> {
             configuration_directory.join(environment_filename),
         ))
         // Add in configurations from environment variables (with a prefix of APP and '__' as separator)
-        // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port`
+        // E.g. `APP_APPLICATION__PORT=5001 would set `Configuration.application.port`
         .add_source(
             config::Environment::with_prefix("APP")
                 .prefix_separator("_")
@@ -114,6 +114,9 @@ pub struct DatabaseConfiguration {
     pub host: String,
     pub database_name: String,
     pub require_ssl: bool,
+
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub idle_timeout: u64,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     #[serde(deserialize_with = "deserialize_number_from_string")]

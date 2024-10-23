@@ -78,9 +78,9 @@ impl Application {
 async fn run(
     listener: TcpListener,
     db_pool: PgPool,
-    settings: Configuration,
+    configuration: Configuration,
 ) -> Result<Server, std::io::Error> {
-    let configuration_data = Data::new(settings.clone());
+    let configuration_data = Data::new(configuration.clone());
     let app_state_data = Data::new(AppState {
         pools: Arc::new(Mutex::new(HashMap::new())),
     });
@@ -88,10 +88,10 @@ async fn run(
     let database_pool_data = Data::new(db_pool);
 
     let server = HttpServer::new(move || {
-        let hmac_secret_key = Key::from(settings.secrets.hmac.expose_secret().as_bytes());
+        let hmac_secret_key = Key::from(configuration.secrets.hmac.expose_secret().as_bytes());
 
-        let application_host_origin = settings.application.host.clone();
-        let application_cookie = settings.application.cookie.clone();
+        let application_host_origin = configuration.application.host.clone();
+        let application_cookie = configuration.application.cookie.clone();
         let actix_compress_middleware = actix_web::middleware::Compress::default();
         let actix_cors_middleware = Cors::default()
             .allowed_origin(&application_host_origin)
