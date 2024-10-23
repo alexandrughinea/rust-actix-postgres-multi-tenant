@@ -29,9 +29,9 @@ pub struct Application {
 impl Application {
     pub async fn build(
         configuration: Configuration,
-        test_pool: Option<PgPool>,
+        pool: Option<PgPool>,
     ) -> Result<Self, std::io::Error> {
-        let connection_pool = if let Some(pool) = test_pool {
+        let connection_pool = if let Some(pool) = pool {
             pool
         } else {
             let database_connect_options = configuration.database.with_db();

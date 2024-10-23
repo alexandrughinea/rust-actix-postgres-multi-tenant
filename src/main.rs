@@ -7,11 +7,11 @@ use tracing::event;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let settings = get_configuration().expect("Failed to read app configurations!");
+    let configuration = get_configuration().expect("Failed to read configurations!");
 
-    init_startup_telemetry(&settings);
+    init_startup_telemetry(&configuration);
 
-    let application = Application::build(settings, None).await?;
+    let application = Application::build(configuration, None).await?;
 
     event!(
         tracing::Level::INFO,

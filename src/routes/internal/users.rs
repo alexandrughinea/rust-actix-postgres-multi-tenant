@@ -14,13 +14,13 @@ pub async fn get_users(
     req: HttpRequest,
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
-    settings: web::Data<Configuration>,
+    configuration: web::Data<Configuration>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
         Err(e) => return e,
     };
-    let tenant_pool = match get_pool_for_tenant(&tenant_id, &state, &pool, &settings).await {
+    let tenant_pool = match get_pool_for_tenant(&tenant_id, &state, &pool, &configuration).await {
         Ok(pool) => pool,
         Err(e) => return e,
     };
@@ -41,13 +41,13 @@ pub async fn create_user(
     user: web::Json<User>,
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
-    settings: web::Data<Configuration>,
+    configuration: web::Data<Configuration>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
         Err(e) => return e,
     };
-    let pool = match get_pool_for_tenant(&tenant_id, &state, &pool, &settings).await {
+    let pool = match get_pool_for_tenant(&tenant_id, &state, &pool, &configuration).await {
         Ok(pool) => pool,
         Err(e) => return e,
     };
