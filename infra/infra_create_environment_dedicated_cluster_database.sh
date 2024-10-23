@@ -34,12 +34,32 @@ set_environment_config() {
   esac
 }
 
+# Function to get the cluster ID based on the cluster name
+get_cluster_id() {
+  CLUSTER_ID=$(doctl databases list --format ID,Name --no-header | grep "$CLUSTER_NAME" | awk '{print $1}')
+
+  if [ -z "$CLUSTER_ID" ]; then
+    echo "Error: No cluster found with the name '$CLUSTER_NAME'."
+    exit 1
+  fi
+}
+
+# Function to check if the database already exists
+database_exists() {
+  EXISTING_DB=$(doctl databases db list "$CLUSTER_ID" --format Name --no-header | grep "^$DB_NAME$")
+
+  if [ -n "$EXISTING_DB" ]; then
+    echo "Database '$DB_NAME' already exists in the '$ENV' environment. Exiting gracefully."
+    exit 0
+  fi
+}
+
 # Function to create a new database in the cluster
 create_database() {
-  echo "Creating database '$DB_NAME' in cluster '$CLUSTER_NAME'..."
+  echo "Creating database '$DB_NAME' in cluster '$CLUSTER_NAME' (ID: '$CLUSTER_ID')..."
 
   # Execute the doctl command to create the database
-  doctl databases db create "$CLUSTER_NAME" "$DB_NAME"
+  doctl databases db create "$CLUSTER_ID" "$DB_NAME"
 
   # Check if the database creation was successful
   if [ $? -eq 0 ]; then
@@ -63,6 +83,12 @@ check_doctl
 
 # Set environment-specific variables
 set_environment_config
+
+# Get the cluster ID
+get_cluster_id
+
+# Check if the database already exists
+database_exists
 
 # Create the database
 create_database

@@ -14,19 +14,20 @@ const DB_MAX_CONNECTIONS: u32 = 5;
 const DB_CONNECTION_IDLE_TIMEOUT_IN_SECONDS: u64 = 300;
 
 #[tracing::instrument(
-    name = "Fetching tenant credentials for {tenant_id}",
-    skip(pool, settings)
+    name = "Fetching tenant credentials for tenant.",
+    fields(tenant_id = %tenant_id),
+    skip(pool, configuration)
 )]
 pub async fn fetch_tenant_db_credentials(
     tenant_id: &Uuid,
     pool: &PgPool,
-    settings: &Configuration,
+    configuration: &Configuration,
 ) -> Result<TenantCredentials, Box<dyn std::error::Error>> {
     let tenant = sqlx::query_as!(Tenant, "SELECT * FROM tenants WHERE id = $1", tenant_id)
         .fetch_one(pool)
         .await?;
 
-    let decryption_key = settings.secrets.aes256_gcm_key.expose_secret();
+    let decryption_key = configuration.secrets.aes256_gcm_key.expose_secret();
     let db_password_encrypted = tenant.db_password_encrypted.unwrap();
     let db_password_plaintext = decrypt_aes_gcm(decryption_key, db_password_encrypted.as_str())?;
 
@@ -37,14 +38,15 @@ pub async fn fetch_tenant_db_credentials(
 }
 
 #[tracing::instrument(
-    name = "Fetching connection pool for {tenant_id}",
-    skip(state, pool, settings)
+    name = "Fetching connection pool for tenant.",
+    fields(tenant_id = %tenant_id),
+    skip(state, pool, configuration)
 )]
 pub async fn get_pool_for_tenant(
     tenant_id: &Uuid,
     state: &AppState,
     pool: &PgPool,
-    settings: &Configuration,
+    configuration: &Configuration,
 ) -> Result<Arc<PgPool>, HttpResponse> {
     let mut pools = state.pools.lock().await;
     // Check if the tenant's pool already exists
@@ -59,18 +61,18 @@ pub async fn get_pool_for_tenant(
     }
 
     // Fetch credentials for the tenant's database
-    let credentials = fetch_tenant_db_credentials(tenant_id, pool, settings)
+    let credentials = fetch_tenant_db_credentials(tenant_id, pool, configuration)
         .await
         .map_err(|_| HttpResponse::InternalServerError().body("Failed to fetch credentials"))?;
 
     let database_settings = DatabaseConfiguration {
         username: credentials.db_user.clone(),
         password: credentials.db_password,
-        port: settings.database.port,
-        host: settings.database.host.clone(),
-        database_name: settings.database.database_name.clone(),
-        require_ssl: settings.database.require_ssl,
-        max_connections: settings.database.max_connections,
+        port: configuration.database.port,
+        host: configuration.database.host.clone(),
+        database_name: configuration.database.database_name.clone(),
+        require_ssl: configuration.database.require_ssl,
+        max_connections: configuration.database.max_connections,
     };
     let connect_options = database_settings.with_db();
 

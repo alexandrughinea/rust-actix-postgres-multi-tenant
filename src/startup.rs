@@ -49,7 +49,7 @@ impl Application {
             }
         };
 
-        sqlx::migrate!()
+        sqlx::migrate!("./migrations")
             .run(&connection_pool)
             .await
             .expect("Failed to migrate the database.");
@@ -80,7 +80,7 @@ async fn run(
     db_pool: PgPool,
     settings: Configuration,
 ) -> Result<Server, std::io::Error> {
-    let settings_data = Data::new(settings.clone());
+    let configuration_data = Data::new(settings.clone());
     let app_state_data = Data::new(AppState {
         pools: Arc::new(Mutex::new(HashMap::new())),
     });
@@ -136,7 +136,7 @@ async fn run(
         actix_web::App::new()
             .app_data(app_state_data.clone())
             .app_data(database_pool_data.clone())
-            .app_data(settings_data.clone())
+            .app_data(configuration_data.clone())
             .wrap(actix_cookie_session_middleware)
             .wrap(actix_compress_middleware)
             .wrap(actix_cors_middleware)
