@@ -19,8 +19,8 @@ BEGIN
     PERFORM upsert_tenant_role(tenant_base_role, db_user, db_password_plaintext);
 
     -- Insert or update the tenant in the tenants table
-    INSERT INTO tenants (name, db_user, db_password_encrypted, role)
-    VALUES (tenant_name, db_user, db_password_encrypted, role)
+    INSERT INTO tenants (name, db_user, db_password_encrypted)
+    VALUES (tenant_name, db_user, db_password_encrypted)
     ON CONFLICT (name) DO UPDATE
         SET
             db_user = EXCLUDED.db_user,
