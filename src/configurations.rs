@@ -8,16 +8,19 @@ use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
 use std::env;
 
-pub fn get_configuration() -> Result<Configuration, ConfigError> {
-    let base_path = env::current_dir().expect("Failed to determine the current directory");
-    let configuration_directory = base_path.join("configurations");
-
-    // Detect the running environment.
-    // Default to `development` if unspecified.
+pub fn get_current_environment() -> Environment {
     let environment: Environment = env::var("APP_ENVIRONMENT")
         .unwrap_or_else(|_| "development".into())
         .try_into()
         .expect("Failed to parse APP_ENVIRONMENT.");
+
+    environment
+}
+
+pub fn get_configuration() -> Result<Configuration, ConfigError> {
+    let base_path = env::current_dir().expect("Failed to determine the current directory");
+    let configuration_directory = base_path.join("configurations");
+    let environment: Environment = get_current_environment();
     let environment_filename = format!("{}.yaml", environment.as_str());
     let configurations = Config::builder()
         .add_source(File::from(configuration_directory.join("base.yaml")))

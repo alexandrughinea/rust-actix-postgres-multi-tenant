@@ -1,5 +1,6 @@
 use crate::configurations::Configuration;
-use crate::models::AppState;
+use crate::migrations::run_migrations;
+use crate::models::{AppError, AppState};
 use crate::routes::{health_check, internal};
 use crate::utils::cleanup_idle_tenant_pools;
 use actix_cors::Cors;
@@ -18,7 +19,6 @@ use std::net::TcpListener;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time;
-use tracing::event;
 use tracing_actix_web::TracingLogger;
 
 pub struct Application {
@@ -43,16 +43,21 @@ impl Application {
             {
                 Ok(pool) => pool,
                 Err(e) => {
-                    event!(target: "sqlx",tracing::Level::ERROR, "Couldn't establish DB connection!: {:#?}", e);
-                    panic!("Couldn't establish DB connection!")
+                    let message = format!("Couldn't establish DB connection!: {:#?}", e);
+                    tracing::event!(target: "sqlx",tracing::Level::ERROR, message);
+                    panic!("{}", message);
                 }
             }
         };
 
-        sqlx::migrate!("./migrations")
-            .run(&connection_pool)
-            .await
-            .expect("Failed to migrate the database.");
+        match run_migrations(&connection_pool).await {
+            Ok(pool) => pool,
+            Err(e) => {
+                let message = format!("Couldn't establish run migrations!: {:#?}", e);
+                tracing::event!(target: "sqlx", tracing::Level::ERROR, message);
+                panic!("{}", message);
+            }
+        }
 
         let address = format!(
             "{}:{}",

@@ -2,6 +2,7 @@ use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use anyhow::Error as AnyhowError;
 use config::ConfigError;
 use sqlx::error::Error as SqlxError;
+use sqlx::migrate::MigrateError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -17,6 +18,9 @@ pub enum AppError {
 
     #[error("A database error occurred: {0}")]
     DatabaseError(#[from] SqlxError),
+
+    #[error("A database migration error occurred: {0}")]
+    DatabaseMigrationError(#[from] MigrateError),
 
     #[error("An internal error occurred. Please try again later.")]
     InternalError(#[from] AnyhowError),
