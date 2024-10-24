@@ -1,6 +1,6 @@
 use crate::configurations::Configuration;
 use crate::migrations::run_migrations;
-use crate::models::{AppError, AppState};
+use crate::models::AppState;
 use crate::routes::{health_check, internal};
 use crate::utils::cleanup_idle_tenant_pools;
 use actix_cors::Cors;
@@ -53,7 +53,7 @@ impl Application {
         match run_migrations(&connection_pool).await {
             Ok(pool) => pool,
             Err(e) => {
-                let message = format!("Couldn't establish run migrations!: {:#?}", e);
+                let message = format!("Couldn't run migrations!: {:#?}", e);
                 tracing::event!(target: "sqlx", tracing::Level::ERROR, message);
                 panic!("{}", message);
             }
