@@ -1,4 +1,3 @@
--- Add migration script here
 /**
 @private
 @description
@@ -10,16 +9,16 @@
 
 @usage
 1. Without excluded tables:
-SELECT setup_tenant_base_role_and_access('tenant_base');
+SELECT setup_tenant_base_role('tenant_base');
 
 2. With excluded tables:
-SELECT setup_tenant_base_role_and_access('tenant_base', ARRAY['example_table1', 'example_table2']);
+SELECT setup_tenant_base_role('tenant_base', ARRAY['example_table1', 'example_table2']);
 */
-CREATE OR REPLACE FUNCTION setup_tenant_base_role_and_access(
+CREATE OR REPLACE FUNCTION setup_tenant_base_role(
     tenant_base_role TEXT,
     excluded_tables TEXT[] DEFAULT '{}'::TEXT[]
 )
-    RETURNS VOID AS $$
+RETURNS VOID AS $$
 DECLARE
     table_name TEXT;
 BEGIN
@@ -36,20 +35,20 @@ BEGIN
 
     -- Grant CRUD access to tenants for all tables in public schema
     FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
-        LOOP
-            EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I TO %I', table_name, tenant_base_role);
-        END LOOP;
+    LOOP
+        EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I TO %I', table_name, tenant_base_role);
+    END LOOP;
 
     -- Revoke privileges on excluded tables
     FOREACH table_name IN ARRAY excluded_tables
-        LOOP
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = table_name) THEN
-                EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %I FROM %I', table_name, tenant_base_role);
-                RAISE NOTICE 'Revoked privileges on table % from role %', table_name, tenant_base_role;
-            ELSE
-                RAISE WARNING 'Table % does not exist in public schema, skipping', table_name;
-            END IF;
-        END LOOP;
+    LOOP
+        IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = table_name) THEN
+            EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %I FROM %I', table_name, tenant_base_role);
+            RAISE NOTICE 'Revoked privileges on table % from role %', table_name, tenant_base_role;
+        ELSE
+            RAISE WARNING 'Table % does not exist in public schema, skipping', table_name;
+        END IF;
+    END LOOP;
 
     -- Add limitations for tenants table (always excluded)
     EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE tenants FROM %I', tenant_base_role);

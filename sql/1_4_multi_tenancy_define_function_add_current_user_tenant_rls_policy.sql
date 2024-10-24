@@ -4,7 +4,7 @@
 - Creates a security policy between a table and a tenant base role (very important distinction: not an extended role);
 - Roles which inherit from `tenant_base_role` will automatically inherit this policy;
 */
-CREATE OR REPLACE FUNCTION add_table_tenant_row_level_isolation_policy(table_name TEXT, tenant_base_role TEXT) RETURNS void AS $$
+CREATE OR REPLACE FUNCTION add_current_user_tenant_rls_policy(table_name TEXT, tenant_base_role TEXT) RETURNS void AS $$
 DECLARE
     policy_name TEXT;
 BEGIN

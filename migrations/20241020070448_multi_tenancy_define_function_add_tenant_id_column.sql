@@ -15,7 +15,7 @@ BEGIN
     ) THEN
         EXECUTE format('
             ALTER TABLE %I
-            ADD COLUMN tenant_id UUID REFERENCES tenants(id)
+            ADD COLUMN tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE
         ', table_name);
         RAISE NOTICE 'Added tenant_id column to table: %', table_name;
     ELSE
