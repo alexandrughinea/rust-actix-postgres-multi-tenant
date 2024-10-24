@@ -14,7 +14,7 @@ services:
         scope: RUN_TIME
       - key: APP_ENVIRONMENT
         scope: RUN_TIME
-        value: production
+        value: staging
       - key: APP_APPLICATION__BASE_URL
         scope: RUN_TIME
         value: ${APP_URL}
