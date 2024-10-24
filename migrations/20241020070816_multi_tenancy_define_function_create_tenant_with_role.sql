@@ -7,9 +7,9 @@
 
 @usage
 Called from the application layer:
-SELECT create_tenant_with_role('tenant_base_role', 'new_tenant', 'tenant_base_role', 'db_password_plaintext', 'db_password_encrypted');
+SELECT create_tenant_with_role('tenant_base_role', 'new_tenant', 'db_password_plaintext', 'db_password_encrypted');
 */
-CREATE OR REPLACE FUNCTION create_tenant_with_role(tenant_base_role TEXT, tenant_name TEXT, role TEXT, db_password_plaintext TEXT, db_password_encrypted TEXT) RETURNS UUID AS $$
+CREATE OR REPLACE FUNCTION create_tenant_with_role(tenant_base_role TEXT, tenant_name TEXT, db_password_plaintext TEXT, db_password_encrypted TEXT) RETURNS UUID AS $$
 DECLARE
     tenant_id UUID;
     -- Join the base role with the tenant's unique name
