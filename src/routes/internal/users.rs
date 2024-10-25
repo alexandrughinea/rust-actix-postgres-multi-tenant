@@ -1,6 +1,9 @@
 use crate::configurations::Configuration;
+use crate::macros::{FlatQueryParams, PaginatedQuery};
 use crate::models::{AppState, User};
+use crate::paginated_query_as;
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
+use actix_web::web::Query;
 use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::json;
 use sqlx::PgPool;
@@ -15,6 +18,7 @@ pub async fn get_users(
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
+    Query(query_params): web::Query<FlatQueryParams>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
@@ -25,13 +29,11 @@ pub async fn get_users(
         Err(e) => return e,
     };
 
-    let users = match sqlx::query_as!(User, "SELECT * FROM users")
-        .fetch_all(tenant_pool.as_ref())
+    let users = paginated_query_as!(User, "SELECT * FROM users")
+        .with_params(query_params)
+        .fetch_paginated(&tenant_pool)
         .await
-    {
-        Ok(users) => users,
-        Err(_) => return HttpResponse::InternalServerError().body("Error fetching users"),
-    };
+        .unwrap();
 
     HttpResponse::Ok().json(json!(users))
 }

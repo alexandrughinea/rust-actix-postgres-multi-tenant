@@ -1,6 +1,5 @@
 use sqlx::migrate::MigrateError;
 use sqlx::PgPool;
-use std::path::Path;
 
 pub async fn run_migrations(pool: &PgPool) -> Result<(), MigrateError> {
     // Run base migrations first
