@@ -5,6 +5,7 @@ use crate::macros::paginated_query_as::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use validator::Validate;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PaginatedResponse<T> {
@@ -16,6 +17,7 @@ pub struct PaginatedResponse<T> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub struct PaginationParams {
     #[serde(deserialize_with = "deserialize_page", default = "default_page")]
     pub page: i64,
@@ -36,6 +38,7 @@ impl Default for PaginationParams {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub struct SortParams {
     #[serde(default = "default_sort_field")]
     pub sort_field: String,
@@ -52,7 +55,8 @@ impl Default for SortParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchParams {
     #[serde(deserialize_with = "deserialize_search")]
     pub search: Option<String>,
@@ -60,7 +64,17 @@ pub struct SearchParams {
     pub search_columns: Option<Vec<String>>,
 }
 
+impl Default for SearchParams {
+    fn default() -> Self {
+        Self {
+            search: None,
+            search_columns: default_search_columns(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "snake_case")]
 pub struct DateRangeParams {
     #[serde(rename = "created_after")]
     pub created_after: Option<DateTime<Utc>>,
@@ -75,7 +89,7 @@ pub enum SortDirection {
     Descending,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, Validate)]
 pub struct FlatQueryParams {
     #[serde(flatten)]
     pub pagination: Option<PaginationParams>,
@@ -96,4 +110,10 @@ pub struct QueryParams {
     pub search: SearchParams,
     pub date_range: DateRangeParams,
     pub filters: HashMap<String, Option<String>>,
+}
+
+impl QueryParams {
+    pub fn new() -> Self {
+        Self::default()
+    }
 }

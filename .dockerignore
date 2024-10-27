@@ -2,5 +2,8 @@
 target/
 tests/
 Dockerfile
-scripts/
+
 certs/
+documentation/
+infra/
+scripts/

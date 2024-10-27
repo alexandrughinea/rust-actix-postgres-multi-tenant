@@ -9,7 +9,7 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), MigrateError> {
     #[cfg(not(debug_assertions))]
     {
         use crate::configurations::get_current_environment;
-        use std::path::PathBuf;
+        use std::path::{Path, PathBuf};
 
         let environment = get_current_environment();
         let migrations_directory = format!("./migrations/{}", environment.as_str());

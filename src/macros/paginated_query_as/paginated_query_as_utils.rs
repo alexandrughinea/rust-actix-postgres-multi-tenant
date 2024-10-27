@@ -1,96 +1,26 @@
 use crate::macros::paginated_query_as::{QueryParams, SortDirection};
-use serde::{Deserialize, Deserializer};
+use crate::macros::{DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE, DEFAULT_SEARCH_COLUMNS};
+use serde::Serialize;
+use serde_json::Value;
 use sqlx::postgres::PgArguments;
 use sqlx::Arguments;
 use uuid::Uuid;
 
-/// Deserializes a page number with proper default handling
-pub fn deserialize_page<'de, D>(deserializer: D) -> Result<i64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    // First try to deserialize as an Option<String>
-    let opt_val = Option::<String>::deserialize(deserializer)?;
-
-    // Handle the Option
-    let val = match opt_val {
-        None => return Ok(1),                           // Default if field is missing
-        Some(s) if s.trim().is_empty() => return Ok(1), // Default if empty string
-        Some(s) => s,
-    };
-
-    // Extract digits and parse
-    let digits: String = val.chars().filter(|c| c.is_ascii_digit()).collect();
-
-    // Parse and provide default
-    digits
-        .parse::<i64>()
-        .map(|n| if n < 1 { 1 } else { n })
-        .or(Ok(1))
-}
-
-/// Deserializes a page size with proper default handling
-pub fn deserialize_page_size<'de, D>(deserializer: D) -> Result<i64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    // First try to deserialize as an Option<String>
-    let opt_val = Option::<String>::deserialize(deserializer)?;
-
-    // Handle the Option
-    let val = match opt_val {
-        None => return Ok(10),                           // Default if field is missing
-        Some(s) if s.trim().is_empty() => return Ok(10), // Default if empty string
-        Some(s) => s,
-    };
-
-    // Extract digits and parse
-    let digits: String = val.chars().filter(|c| c.is_ascii_digit()).collect();
-
-    // Parse and provide default, clamping between 1 and 100
-    digits.parse::<i64>().map(|n| n.clamp(1, 100)).or(Ok(10))
-}
-
-/// Deserializes a search string with proper sanitization and default handling
-pub fn deserialize_search<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    // First try to deserialize as an Option<String>
-    let opt_val = Option::<String>::deserialize(deserializer)?;
-
-    // Handle the Option
-    let val = match opt_val {
-        None => return Ok(None), // No search if field is missing
-        Some(s) if s.trim().is_empty() => return Ok(None), // No search if empty string
-        Some(s) => s,
-    };
-
-    // Clean and normalize the search string
-    let cleaned = val
-        .trim()
-        .chars()
-        .filter(|c| !c.is_control())
-        .take(100)
-        .collect::<String>();
-
-    if cleaned.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(cleaned))
-    }
-}
-
 pub fn default_page() -> i64 {
-    1
+    DEFAULT_PAGE
 }
 
 pub fn default_page_size() -> i64 {
-    10
+    DEFAULT_MIN_PAGE_SIZE
 }
 
 pub fn default_search_columns() -> Option<Vec<String>> {
-    Some(vec!["name".to_string()])
+    Some(
+        DEFAULT_SEARCH_COLUMNS
+            .iter()
+            .map(|&s| s.to_string())
+            .collect(),
+    )
 }
 
 pub fn default_sort_field() -> String {
@@ -101,53 +31,73 @@ pub fn default_sort_direction() -> SortDirection {
     SortDirection::Descending
 }
 
-pub fn build_pg_arguments(params: &QueryParams) -> (Vec<String>, PgArguments) {
+pub fn quote_identifier(identifier: &str) -> String {
+    let parts: Vec<&str> = identifier.split('.').collect();
+    parts
+        .iter()
+        .map(|part| format!("\"{}\"", part.replace("\"", "\"\"")))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+pub fn get_field_names<T>() -> Vec<String>
+where
+    T: Default + Serialize,
+{
+    let default_value = T::default();
+    let json_value = serde_json::to_value(default_value).unwrap();
+
+    if let Value::Object(map) = json_value {
+        map.keys().cloned().collect()
+    } else {
+        vec![]
+    }
+}
+
+pub fn build_pg_arguments<T>(params: &QueryParams) -> (Vec<String>, PgArguments)
+where
+    T: Default + Serialize,
+{
+    let valid_columns_from_struct = get_field_names::<T>();
     let mut arguments = PgArguments::default();
     let mut conditions = Vec::new();
 
+    // Add only valid filter conditions
     for (key, value) in &params.filters {
-        if let Some(value) = value {
-            let quoted_key = quote_identifier(key);
-            conditions.push(format!("{} = ${}", quoted_key, arguments.len() + 1));
-            let _ = arguments.add(value);
+        if valid_columns_from_struct.contains(key) {
+            if let Some(value) = value {
+                let quoted_key = quote_identifier(key);
+                conditions.push(format!("{} = ${}", quoted_key, arguments.len() + 1));
+                let _ = arguments.add(value);
+            }
+        } else {
+            tracing::warn!(column = %key, "Skipping invalid filter column");
         }
     }
 
+    // Add only valid search conditions
     if let Some(search) = &params.search.search {
         if let Some(columns) = &params.search.search_columns {
-            if !columns.is_empty() && !search.trim().is_empty() {
-                let search_term_sanitized = search
-                    .trim()
-                    .chars()
-                    .filter(|&c| {
-                        // Allow only alphanumeric characters and basic punctuation
-                        c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_'
-                    })
-                    .collect::<String>();
+            let valid_search_columns: Vec<&String> = columns
+                .iter()
+                .filter(|column| valid_columns_from_struct.contains(*column))
+                .collect();
 
-                if !search_term_sanitized.is_empty() {
-                    let pattern = format!("%{}%", search_term_sanitized);
-                    let is_uuid = Uuid::try_parse(&search_term_sanitized).is_ok();
+            if !valid_search_columns.is_empty() && !search.trim().is_empty() {
+                if !search.is_empty() {
+                    let pattern = format!("%{}%", search);
+                    let is_uuid = Uuid::try_parse(search).is_ok();
+                    let next_argument = arguments.len() + 1;
 
-                    let search_conditions: Vec<String> = columns
+                    let search_conditions: Vec<String> = valid_search_columns
                         .iter()
-                        .filter_map(|column| {
-                            // @todo Also validate column name to prevent SQL injection
+                        .map(|column| {
                             let quoted_column = quote_identifier(column);
-
-                            Some(if is_uuid {
-                                format!(
-                                    "CAST({} AS text) ILIKE ${}",
-                                    quoted_column,
-                                    arguments.len() + 1
-                                )
+                            if is_uuid {
+                                format!("CAST({} AS text) ILIKE ${}", quoted_column, next_argument)
                             } else {
-                                format!(
-                                    "LOWER({}) LIKE LOWER(${})",
-                                    quoted_column,
-                                    arguments.len() + 1
-                                )
-                            })
+                                format!("LOWER({}) LIKE LOWER(${})", quoted_column, next_argument)
+                            }
                         })
                         .collect();
 
@@ -156,10 +106,13 @@ pub fn build_pg_arguments(params: &QueryParams) -> (Vec<String>, PgArguments) {
                         let _ = arguments.add(pattern);
                     }
                 }
+            } else if !columns.is_empty() {
+                tracing::warn!("No valid search columns found among: {:?}", columns);
             }
         }
     }
-    // Add date range
+
+    // Add date range conditions (fixed columns)
     if let Some(after) = params.date_range.created_after {
         conditions.push(format!("created_at >= ${}", arguments.len() + 1));
         let _ = arguments.add(after);
@@ -173,11 +126,25 @@ pub fn build_pg_arguments(params: &QueryParams) -> (Vec<String>, PgArguments) {
     (conditions, arguments)
 }
 
-pub fn quote_identifier(identifier: &str) -> String {
-    let parts: Vec<&str> = identifier.split('.').collect();
-    parts
-        .iter()
-        .map(|part| format!("\"{}\"", part.replace("\"", "\"\"")))
-        .collect::<Vec<_>>()
-        .join(".")
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Serialize;
+
+    #[derive(Default, Serialize)]
+    struct TestStruct {
+        field1: String,
+        field2: i32,
+        #[serde(skip)]
+        #[allow(dead_code)]
+        field3: bool,
+    }
+
+    #[test]
+    fn test_get_fields() {
+        let fields = get_field_names::<TestStruct>();
+        assert!(fields.contains(&"field1".to_string()));
+        assert!(fields.contains(&"field2".to_string()));
+        assert!(!fields.contains(&"field3".to_string()));
+    }
 }

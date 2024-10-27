@@ -3,8 +3,8 @@ use crate::macros::{FlatQueryParams, PaginatedQuery};
 use crate::models::{AppState, User};
 use crate::paginated_query_as;
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
-use actix_web::web::Query;
 use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web_validator::{Json, Query};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -18,7 +18,7 @@ pub async fn get_users(
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
-    Query(query_params): web::Query<FlatQueryParams>,
+    Query(query_params): Query<FlatQueryParams>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
@@ -40,7 +40,7 @@ pub async fn get_users(
 
 pub async fn create_user(
     req: HttpRequest,
-    user: web::Json<User>,
+    user: Json<User>,
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
@@ -56,13 +56,13 @@ pub async fn create_user(
 
     let user = sqlx::query_as::<_, User>(
         r#"
-        INSERT INTO users (tenant_id, name)
+        INSERT INTO users (first_name, last_name)
         VALUES ($1, $2)
         RETURNING *
         "#,
     )
-    .bind(tenant_id)
-    .bind(&user.name)
+    .bind(&user.first_name)
+    .bind(&user.last_name)
     .fetch_one(pool.as_ref())
     .await
     .unwrap();

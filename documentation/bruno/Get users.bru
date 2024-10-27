@@ -1,0 +1,26 @@
+meta {
+  name: Get users
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/v1/internal/users?page_size=5&page=1&sort_direction=descending&search=9
+  body: none
+  auth: none
+}
+
+params:query {
+  page_size: 5
+  page: 1
+  sort_direction: descending
+  search: 9
+  ~sort_field: name
+  ~created_before: 
+  ~created_after: 
+  ~search_columns[]: name
+}
+
+headers {
+  x-tenant-id: {{tenant_id}}
+}

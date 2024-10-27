@@ -2,9 +2,10 @@ use crate::macros::paginated_query_as::{
     build_pg_arguments, quote_identifier, DateRangeParams, FlatQueryParams, PaginatedResponse,
     PaginationParams, QueryParams, SearchParams, SortDirection, SortParams,
 };
+use crate::macros::{DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{postgres::Postgres, query::QueryAs, Execute, FromRow, IntoArguments, Pool, Row};
+use sqlx::{postgres::Postgres, query::QueryAs, Execute, FromRow, IntoArguments, Pool};
 use std::collections::HashMap;
 
 impl From<FlatQueryParams> for QueryParams {
@@ -22,8 +23,8 @@ impl From<FlatQueryParams> for QueryParams {
 impl QueryParams {
     pub fn pagination(mut self, page: i64, page_size: i64) -> Self {
         self.pagination = PaginationParams {
-            page: page.max(1),
-            page_size: page_size.clamp(1, 100),
+            page: page.max(DEFAULT_PAGE),
+            page_size: page_size.clamp(DEFAULT_MIN_PAGE_SIZE, DEFAULT_MAX_PAGE_SIZE),
         };
         self
     }
@@ -121,8 +122,8 @@ where
     ) -> Result<PaginatedResponse<T>, sqlx::Error> {
         let base_sql = format!("WITH base_query AS ({})", self.query.sql());
 
-        let (conditions, count_arguments) = build_pg_arguments(&self.params);
-        let (_, main_arguments) = build_pg_arguments(&self.params);
+        let (conditions, count_arguments) = build_pg_arguments::<T>(&self.params);
+        let (_, main_arguments) = build_pg_arguments::<T>(&self.params);
 
         let where_clause = if !conditions.is_empty() {
             format!(" WHERE {}", conditions.join(" AND "))
@@ -134,8 +135,8 @@ where
         let pagination = self.params.pagination.clone();
         let sort = self.params.sort.clone();
 
-        let page_size = pagination.page_size.clamp(1, 100);
-        let page = pagination.page.max(1);
+        let page_size = pagination.page_size;
+        let page = pagination.page;
         let order = match sort.sort_direction {
             SortDirection::Ascending => "ASC",
             SortDirection::Descending => "DESC",
@@ -194,9 +195,20 @@ macro_rules! paginated_query_as {
 mod tests {
     use super::*;
 
+    #[derive(Debug, Default, Serialize)]
+    struct TestModel {
+        name: String,
+        title: String,
+        description: String,
+        status: String,
+        category: String,
+        updated_at: DateTime<Utc>,
+        created_at: DateTime<Utc>,
+    }
+
     #[test]
     fn test_empty_params() {
-        let params = QueryParams::default().build();
+        let params = QueryParams::new().build();
 
         assert_eq!(params.pagination.page, 1);
         assert_eq!(params.pagination.page_size, 10);
@@ -209,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_partial_params() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .pagination(2, 10)
             .search("test".to_string(), vec!["name".to_string()])
             .build();
@@ -228,12 +240,12 @@ mod tests {
     fn test_invalid_params() {
         // For builder pattern, invalid params would be handled at compile time
         // But we can test the defaults
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .pagination(0, 0) // Should be clamped to minimum values
             .build();
 
         assert_eq!(params.pagination.page, 1);
-        assert_eq!(params.pagination.page_size, 1);
+        assert_eq!(params.pagination.page_size, 10);
     }
 
     #[test]
@@ -242,7 +254,7 @@ mod tests {
         filters.insert("status".to_string(), Some("active".to_string()));
         filters.insert("category".to_string(), Some("test".to_string()));
 
-        let params = QueryParams::default().filters(filters).build();
+        let params = QueryParams::new().filters(filters).build();
 
         assert!(params.filters.contains_key("status"));
         assert_eq!(
@@ -258,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_search_with_columns() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .search(
                 "test".to_string(),
                 vec!["title".to_string(), "description".to_string()],
@@ -274,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_full_params() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .pagination(2, 20)
             .sort("updated_at".to_string(), SortDirection::Ascending)
             .search(
@@ -302,11 +314,11 @@ mod tests {
 
     #[test]
     fn test_search_query_generation() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .search("XXX".to_string(), vec!["name".to_string()])
             .build();
 
-        let (conditions, _) = build_pg_arguments(&params);
+        let (conditions, _) = build_pg_arguments::<TestModel>(&params);
 
         assert!(!conditions.is_empty());
         assert!(conditions.iter().any(|c| c.contains("LOWER")));
@@ -315,17 +327,17 @@ mod tests {
 
     #[test]
     fn test_empty_search_query() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .search("   ".to_string(), vec!["name".to_string()])
             .build();
 
-        let (conditions, _) = build_pg_arguments(&params);
+        let (conditions, _) = build_pg_arguments::<TestModel>(&params);
         assert!(!conditions.iter().any(|c| c.contains("LIKE")));
     }
 
     #[test]
     fn test_filter_chain() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .filter("status", Some("active"))
             .filter("category", Some("test"))
             .build();
@@ -342,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_mixed_pagination() {
-        let params = QueryParams::default()
+        let params = QueryParams::new()
             .pagination(2, 10)
             .search("test".to_string(), vec!["title".to_string()])
             .filter("status", Some("active"))
