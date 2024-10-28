@@ -5,20 +5,25 @@ meta {
 }
 
 get {
-  url: {{host}}/v1/internal/users?page_size=5&page=1&sort_direction=descending&search=9
+  url: {{host}}/v1/internal/users
   body: none
   auth: none
 }
 
 params:query {
-  page_size: 5
-  page: 1
-  sort_direction: descending
-  search: 9
-  ~sort_field: name
+  ~sort_field: last_name
+  ~sort_direction: descending
+  ~sort_direction: ascending
+  ~sort_field: first_name
+  ~confirmed: false
+  ~confirmed: true
+  ~search: true
+  ~page_size: 11
+  ~page: 1
   ~created_before: 
   ~created_after: 
-  ~search_columns[]: name
+  ~search_columns[]: first_name
+  ~search_columns[]: last_name
 }
 
 headers {

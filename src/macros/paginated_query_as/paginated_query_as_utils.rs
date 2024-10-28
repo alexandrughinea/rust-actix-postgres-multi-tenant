@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use crate::macros::paginated_query_as::{QueryParams, SortDirection};
 use crate::macros::{DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE, DEFAULT_SEARCH_COLUMNS};
 use serde::Serialize;
@@ -40,7 +41,7 @@ pub fn quote_identifier(identifier: &str) -> String {
         .join(".")
 }
 
-pub fn get_field_names<T>() -> Vec<String>
+pub fn get_struct_field_names<T>() -> Vec<String>
 where
     T: Default + Serialize,
 {
@@ -54,11 +55,35 @@ where
     }
 }
 
+pub fn get_pg_type_cast<T: ToString>(value: &T) -> &'static str {
+    let str_value = value.to_string();
+    match str_value.to_lowercase().as_str() {
+        // Booleans
+        v if v == "true" || v == "false" => "::boolean",
+
+        // Numbers
+        v if v.parse::<i64>().is_ok() => "::bigint",
+        v if v.parse::<f64>().is_ok() => "::double precision",
+
+        // UUIDs
+        v if Uuid::parse_str(v).is_ok() => "::uuid",
+
+        // JSON
+        v if v.starts_with('{') || v.starts_with('[') => "::jsonb",
+
+        // Dates/Timestamps
+        v if v.parse::<DateTime<Utc>>().is_ok() => "::timestamp with time zone",
+
+        // Default - no type cast
+        _ => ""
+    }
+}
+
 pub fn build_pg_arguments<T>(params: &QueryParams) -> (Vec<String>, PgArguments)
 where
     T: Default + Serialize,
 {
-    let valid_columns_from_struct = get_field_names::<T>();
+    let valid_columns_from_struct = get_struct_field_names::<T>();
     let mut arguments = PgArguments::default();
     let mut conditions = Vec::new();
 
@@ -66,8 +91,12 @@ where
     for (key, value) in &params.filters {
         if valid_columns_from_struct.contains(key) {
             if let Some(value) = value {
-                let quoted_key = quote_identifier(key);
-                conditions.push(format!("{} = ${}", quoted_key, arguments.len() + 1));
+                let table_column = quote_identifier(key);
+                let table_column_value = get_pg_type_cast(value);
+                let next_argument = arguments.len() + 1;
+
+
+                conditions.push(format!("{} = ${}{}", table_column, next_argument, table_column_value));
                 let _ = arguments.add(value);
             }
         } else {
@@ -92,11 +121,12 @@ where
                     let search_conditions: Vec<String> = valid_search_columns
                         .iter()
                         .map(|column| {
-                            let quoted_column = quote_identifier(column);
+                            let table_column = quote_identifier(column);
+                            
                             if is_uuid {
-                                format!("CAST({} AS text) ILIKE ${}", quoted_column, next_argument)
+                                format!("CAST({} AS text) ILIKE ${}", table_column, next_argument)
                             } else {
-                                format!("LOWER({}) LIKE LOWER(${})", quoted_column, next_argument)
+                                format!("LOWER({}) LIKE LOWER(${})", table_column, next_argument)
                             }
                         })
                         .collect();
@@ -142,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_get_fields() {
-        let fields = get_field_names::<TestStruct>();
+        let fields = get_struct_field_names::<TestStruct>();
         assert!(fields.contains(&"field1".to_string()));
         assert!(fields.contains(&"field2".to_string()));
         assert!(!fields.contains(&"field3".to_string()));
