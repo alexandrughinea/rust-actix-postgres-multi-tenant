@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use crate::macros::paginated_query_as::{QueryParams, SortDirection};
 use crate::macros::{DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE, DEFAULT_SEARCH_COLUMNS};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::postgres::PgArguments;
@@ -33,8 +33,9 @@ pub fn default_sort_direction() -> SortDirection {
 }
 
 pub fn quote_identifier(identifier: &str) -> String {
-    let parts: Vec<&str> = identifier.split('.').collect();
-    parts
+    identifier
+        .split('.')
+        .collect::<Vec<&str>>()
         .iter()
         .map(|part| format!("\"{}\"", part.replace("\"", "\"\"")))
         .collect::<Vec<_>>()
@@ -75,11 +76,11 @@ pub fn get_pg_type_cast<T: ToString>(value: &T) -> &'static str {
         v if v.parse::<DateTime<Utc>>().is_ok() => "::timestamp with time zone",
 
         // Default - no type cast
-        _ => ""
+        _ => "",
     }
 }
 
-pub fn build_pg_arguments<T>(params: &QueryParams) -> (Vec<String>, PgArguments)
+pub fn build_pg_arguments<T>(params: &QueryParams<T>) -> (Vec<String>, PgArguments)
 where
     T: Default + Serialize,
 {
@@ -95,8 +96,10 @@ where
                 let table_column_value = get_pg_type_cast(value);
                 let next_argument = arguments.len() + 1;
 
-
-                conditions.push(format!("{} = ${}{}", table_column, next_argument, table_column_value));
+                conditions.push(format!(
+                    "{} = ${}{}",
+                    table_column, next_argument, table_column_value
+                ));
                 let _ = arguments.add(value);
             }
         } else {
@@ -122,7 +125,7 @@ where
                         .iter()
                         .map(|column| {
                             let table_column = quote_identifier(column);
-                            
+
                             if is_uuid {
                                 format!("CAST({} AS text) ILIKE ${}", table_column, next_argument)
                             } else {

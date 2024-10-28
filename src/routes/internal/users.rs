@@ -3,8 +3,9 @@ use crate::macros::{FlatQueryParams, PaginatedQuery};
 use crate::models::{AppState, User};
 use crate::paginated_query_as;
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
+use actix_web::web::Query;
 use actix_web::{web, HttpRequest, HttpResponse};
-use actix_web_validator::{Json, Query};
+use actix_web_validator::Json;
 use serde_json::json;
 use sqlx::PgPool;
 

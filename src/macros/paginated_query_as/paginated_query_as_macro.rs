@@ -2,13 +2,15 @@ use crate::macros::paginated_query_as::{
     build_pg_arguments, quote_identifier, DateRangeParams, FlatQueryParams, PaginatedResponse,
     PaginationParams, QueryParams, SearchParams, SortDirection, SortParams,
 };
-use crate::macros::{DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE};
+use crate::macros::{
+    get_struct_field_names, DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE,
+};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{postgres::Postgres, query::QueryAs, Execute, FromRow, IntoArguments, Pool};
 use std::collections::HashMap;
 
-impl From<FlatQueryParams> for QueryParams {
+impl<T> From<FlatQueryParams> for QueryParams<T> {
     fn from(params: FlatQueryParams) -> Self {
         QueryParams {
             pagination: params.pagination.unwrap_or_default(),
@@ -16,11 +18,20 @@ impl From<FlatQueryParams> for QueryParams {
             search: params.search.unwrap_or_default(),
             date_range: params.date_range.unwrap_or_default(),
             filters: params.filters.unwrap_or_default(),
+            _phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl QueryParams {
+impl<T: Default + Serialize> QueryParams<T> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn build(self) -> QueryParams<T> {
+        self
+    }
+
     pub fn pagination(mut self, page: i64, page_size: i64) -> Self {
         self.pagination = PaginationParams {
             page: page.max(DEFAULT_PAGE),
@@ -62,25 +73,31 @@ impl QueryParams {
     }
 
     pub fn filter(mut self, key: impl Into<String>, value: Option<impl Into<String>>) -> Self {
-        self.filters.insert(key.into(), value.map(Into::into));
+        let key = key.into();
+        let valid_fields = get_struct_field_names::<T>();
+
+        if valid_fields.contains(&key) {
+            self.filters.insert(key, value.map(Into::into));
+        } else {
+            tracing::warn!(column = %key, "Skipping invalid filter column");
+        }
         self
     }
 
     pub fn filters(mut self, filters: HashMap<String, Option<impl Into<String>>>) -> Self {
+        let valid_fields = get_struct_field_names::<T>();
+
         self.filters
-            .extend(filters.into_iter().map(|(k, v)| (k, v.map(Into::into))));
+            .extend(filters.into_iter().filter_map(|(k, v)| {
+                if valid_fields.contains(&k) {
+                    Some((k, v.map(Into::into)))
+                } else {
+                    tracing::warn!(column = %k, "Skipping invalid filter column");
+                    None
+                }
+            }));
 
         self
-    }
-
-    pub fn build(self) -> QueryParams {
-        QueryParams {
-            pagination: self.pagination,
-            sort: self.sort,
-            search: self.search,
-            date_range: self.date_range,
-            filters: self.filters,
-        }
     }
 }
 
@@ -89,7 +106,7 @@ where
     T: for<'r> FromRow<'r, <Postgres as sqlx::Database>::Row> + Send + Unpin,
 {
     query: QueryAs<'q, Postgres, T, A>,
-    params: QueryParams,
+    params: QueryParams<T>,
 }
 
 impl<'q, T, A> PaginatedQuery<'q, T, A>
@@ -109,7 +126,7 @@ where
         }
     }
 
-    pub fn with_params(self, params: impl Into<QueryParams>) -> Self {
+    pub fn with_params(self, params: impl Into<QueryParams<T>>) -> Self {
         Self {
             query: self.query,
             params: params.into(),
@@ -208,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_empty_params() {
-        let params = QueryParams::new().build();
+        let params = QueryParams::<TestModel>::new().build();
 
         assert_eq!(params.pagination.page, 1);
         assert_eq!(params.pagination.page_size, 10);
@@ -221,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_partial_params() {
-        let params = QueryParams::new()
+        let params = QueryParams::<TestModel>::new()
             .pagination(2, 10)
             .search("test".to_string(), vec!["name".to_string()])
             .build();
@@ -240,7 +257,7 @@ mod tests {
     fn test_invalid_params() {
         // For builder pattern, invalid params would be handled at compile time
         // But we can test the defaults
-        let params = QueryParams::new()
+        let params = QueryParams::<TestModel>::new()
             .pagination(0, 0) // Should be clamped to minimum values
             .build();
 
@@ -254,7 +271,7 @@ mod tests {
         filters.insert("status".to_string(), Some("active".to_string()));
         filters.insert("category".to_string(), Some("test".to_string()));
 
-        let params = QueryParams::new().filters(filters).build();
+        let params = QueryParams::<TestModel>::new().filters(filters).build();
 
         assert!(params.filters.contains_key("status"));
         assert_eq!(
@@ -270,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_search_with_columns() {
-        let params = QueryParams::new()
+        let params = QueryParams::<TestModel>::new()
             .search(
                 "test".to_string(),
                 vec!["title".to_string(), "description".to_string()],
@@ -286,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_full_params() {
-        let params = QueryParams::new()
+        let params = QueryParams::<TestModel>::new()
             .pagination(2, 20)
             .sort("updated_at".to_string(), SortDirection::Ascending)
             .search(
@@ -337,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_filter_chain() {
-        let params = QueryParams::new()
+        let params = QueryParams::<TestModel>::new()
             .filter("status", Some("active"))
             .filter("category", Some("test"))
             .build();
@@ -354,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_mixed_pagination() {
-        let params = QueryParams::new()
+        let params = QueryParams::<TestModel>::new()
             .pagination(2, 10)
             .search("test".to_string(), vec!["title".to_string()])
             .filter("status", Some("active"))

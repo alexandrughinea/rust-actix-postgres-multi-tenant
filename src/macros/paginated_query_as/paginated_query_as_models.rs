@@ -1,11 +1,11 @@
 use crate::macros::paginated_query_as::{
     default_page, default_page_size, default_search_columns, default_sort_direction,
     default_sort_field, deserialize_page, deserialize_page_size, deserialize_search,
+    deserialize_search_columns,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use validator::Validate;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PaginatedResponse<T> {
@@ -55,28 +55,22 @@ impl Default for SortParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct SearchParams {
     #[serde(deserialize_with = "deserialize_search")]
     pub search: Option<String>,
-    #[serde(default = "default_search_columns")]
+    #[serde(
+        rename = "search_columns[]",
+        deserialize_with = "deserialize_search_columns",
+        default = "default_search_columns"
+    )]
     pub search_columns: Option<Vec<String>>,
-}
-
-impl Default for SearchParams {
-    fn default() -> Self {
-        Self {
-            search: None,
-            search_columns: default_search_columns(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct DateRangeParams {
-    #[serde(rename = "created_after")]
     pub created_after: Option<DateTime<Utc>>,
     pub created_before: Option<DateTime<Utc>>,
 }
@@ -89,7 +83,7 @@ pub enum SortDirection {
     Descending,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, Validate)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct FlatQueryParams {
     #[serde(flatten)]
     pub pagination: Option<PaginationParams>,
@@ -104,16 +98,11 @@ pub struct FlatQueryParams {
 }
 
 #[derive(Debug, Default)]
-pub struct QueryParams {
+pub struct QueryParams<T> {
     pub pagination: PaginationParams,
     pub sort: SortParams,
     pub search: SearchParams,
     pub date_range: DateRangeParams,
     pub filters: HashMap<String, Option<String>>,
-}
-
-impl QueryParams {
-    pub fn new() -> Self {
-        Self::default()
-    }
+    pub(crate) _phantom: std::marker::PhantomData<T>,
 }

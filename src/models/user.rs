@@ -11,6 +11,7 @@ pub struct User {
 
     // `tenant_id` is skipped for serialization but should still be a valid UUID when provided.
     #[serde(skip)]
+    #[sqlx(skip)]
     pub tenant_id: Option<Uuid>,
 
     // First name should be present and could have a length restriction.
