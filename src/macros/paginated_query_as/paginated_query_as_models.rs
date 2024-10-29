@@ -6,6 +6,7 @@ use crate::macros::paginated_query_as::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PaginatedResponse<T> {
@@ -55,17 +56,25 @@ impl Default for SortParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SearchParams {
     #[serde(deserialize_with = "deserialize_search")]
     pub search: Option<String>,
     #[serde(
-        rename = "search_columns[]",
         deserialize_with = "deserialize_search_columns",
         default = "default_search_columns"
     )]
     pub search_columns: Option<Vec<String>>,
+}
+
+impl Default for SearchParams {
+    fn default() -> Self {
+        Self {
+            search: None,
+            search_columns: default_search_columns(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -104,5 +113,5 @@ pub struct QueryParams<T> {
     pub search: SearchParams,
     pub date_range: DateRangeParams,
     pub filters: HashMap<String, Option<String>>,
-    pub(crate) _phantom: std::marker::PhantomData<T>,
+    pub(crate) _phantom: PhantomData<T>,
 }

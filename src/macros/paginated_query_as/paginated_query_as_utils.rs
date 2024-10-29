@@ -1,10 +1,8 @@
-use crate::macros::paginated_query_as::{QueryParams, SortDirection};
+use crate::macros::paginated_query_as::SortDirection;
 use crate::macros::{DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE, DEFAULT_SEARCH_COLUMNS};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::Value;
-use sqlx::postgres::PgArguments;
-use sqlx::Arguments;
 use uuid::Uuid;
 
 pub fn default_page() -> i64 {
@@ -78,85 +76,6 @@ pub fn get_pg_type_cast<T: ToString>(value: &T) -> &'static str {
         // Default - no type cast
         _ => "",
     }
-}
-
-pub fn build_pg_arguments<T>(params: &QueryParams<T>) -> (Vec<String>, PgArguments)
-where
-    T: Default + Serialize,
-{
-    let valid_columns_from_struct = get_struct_field_names::<T>();
-    let mut arguments = PgArguments::default();
-    let mut conditions = Vec::new();
-
-    // Add only valid filter conditions
-    for (key, value) in &params.filters {
-        if valid_columns_from_struct.contains(key) {
-            if let Some(value) = value {
-                let table_column = quote_identifier(key);
-                let table_column_value = get_pg_type_cast(value);
-                let next_argument = arguments.len() + 1;
-
-                conditions.push(format!(
-                    "{} = ${}{}",
-                    table_column, next_argument, table_column_value
-                ));
-                let _ = arguments.add(value);
-            }
-        } else {
-            tracing::warn!(column = %key, "Skipping invalid filter column");
-        }
-    }
-
-    // Add only valid search conditions
-    if let Some(search) = &params.search.search {
-        if let Some(columns) = &params.search.search_columns {
-            let valid_search_columns: Vec<&String> = columns
-                .iter()
-                .filter(|column| valid_columns_from_struct.contains(*column))
-                .collect();
-
-            if !valid_search_columns.is_empty() && !search.trim().is_empty() {
-                if !search.is_empty() {
-                    let pattern = format!("%{}%", search);
-                    let is_uuid = Uuid::try_parse(search).is_ok();
-                    let next_argument = arguments.len() + 1;
-
-                    let search_conditions: Vec<String> = valid_search_columns
-                        .iter()
-                        .map(|column| {
-                            let table_column = quote_identifier(column);
-
-                            if is_uuid {
-                                format!("CAST({} AS text) ILIKE ${}", table_column, next_argument)
-                            } else {
-                                format!("LOWER({}) LIKE LOWER(${})", table_column, next_argument)
-                            }
-                        })
-                        .collect();
-
-                    if !search_conditions.is_empty() {
-                        conditions.push(format!("({})", search_conditions.join(" OR ")));
-                        let _ = arguments.add(pattern);
-                    }
-                }
-            } else if !columns.is_empty() {
-                tracing::warn!("No valid search columns found among: {:?}", columns);
-            }
-        }
-    }
-
-    // Add date range conditions (fixed columns)
-    if let Some(after) = params.date_range.created_after {
-        conditions.push(format!("created_at >= ${}", arguments.len() + 1));
-        let _ = arguments.add(after);
-    }
-
-    if let Some(before) = params.date_range.created_before {
-        conditions.push(format!("created_at <= ${}", arguments.len() + 1));
-        let _ = arguments.add(before);
-    }
-
-    (conditions, arguments)
 }
 
 #[cfg(test)]

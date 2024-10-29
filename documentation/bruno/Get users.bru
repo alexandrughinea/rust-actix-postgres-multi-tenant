@@ -5,25 +5,24 @@ meta {
 }
 
 get {
-  url: {{host}}/v1/internal/users
+  url: {{host}}/v1/internal/users?search_columns=last_name,first_name&search=xx
   body: none
   auth: none
 }
 
 params:query {
+  search_columns: last_name,first_name
+  search: xx
   ~sort_field: last_name
   ~sort_direction: descending
   ~sort_direction: ascending
   ~sort_field: first_name
   ~confirmed: false
   ~confirmed: true
-  ~search: true
   ~page_size: 11
   ~page: 1
   ~created_before: 
   ~created_after: 
-  ~search_columns[]: first_name
-  ~search_columns[]: last_name
 }
 
 headers {

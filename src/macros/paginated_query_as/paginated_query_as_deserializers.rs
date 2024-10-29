@@ -1,6 +1,5 @@
 use crate::macros::{
-    default_search_columns, DEFAULT_MAX_FIELD_LENGTH, DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE,
-    DEFAULT_PAGE,
+    DEFAULT_MAX_FIELD_LENGTH, DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE,
 };
 use serde::{Deserialize, Deserializer};
 
@@ -97,10 +96,14 @@ pub fn deserialize_search_columns<'de, D>(deserializer: D) -> Result<Option<Vec<
 where
     D: Deserializer<'de>,
 {
-    match Vec::<String>::deserialize(deserializer) {
-        Ok(vec) if !vec.is_empty() => Ok(Some(vec)),
-        _ => Ok(default_search_columns()),
-    }
+    let s: Option<String> = Option::deserialize(deserializer)?;
+
+    Ok(s.map(|s| {
+        s.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    }))
 }
 
 #[cfg(test)]

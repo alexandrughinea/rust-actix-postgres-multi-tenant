@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{postgres::Postgres, query::QueryAs, Execute, FromRow, IntoArguments, Pool};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 impl<T> From<FlatQueryParams> for QueryParams<T> {
     fn from(params: FlatQueryParams) -> Self {
@@ -18,7 +19,7 @@ impl<T> From<FlatQueryParams> for QueryParams<T> {
             search: params.search.unwrap_or_default(),
             date_range: params.date_range.unwrap_or_default(),
             filters: params.filters.unwrap_or_default(),
-            _phantom: std::marker::PhantomData,
+            _phantom: PhantomData::<T>,
         }
     }
 }
