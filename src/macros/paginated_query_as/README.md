@@ -1,10 +1,12 @@
 # Paginated Query Builder for SQLx PostgreSQL
 
-A flexible, type-safe query builder for handling paginated queries in Rust with SQLx and PostgreSQL. Built for robust handling of dynamic web API queries with built-in support for pagination, searching, filtering, and sorting.
+A flexible, type-safe thin layer over SQLx query builder for handling paginated queries in Rust and PostgreSQL (can be extended).
+Built for robust handling of dynamic web API queries with built-in support for pagination, searching, filtering, and sorting 
 
 ## Table of Contents
 - [Features](#features)
-- [Why Use This Library](#why-use-this-library)
+- [Market analysis](#market-analysis)
+- [Why Use This Library](#why-this-library)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [API Documentation](#api-documentation)
@@ -16,7 +18,7 @@ A flexible, type-safe query builder for handling paginated queries in Rust with 
 
 ## Features
 
-### Core Capabilities
+### Core capabilities
 - 🔍 Full-text search with column specification
 - 📑 Smart pagination with customizable page size
 - 🔄 Dynamic sorting on any column
@@ -26,16 +28,14 @@ A flexible, type-safe query builder for handling paginated queries in Rust with 
 - ⚡ High performance
 - 🛡️ SQL injection protection
 
-### Technical Features
+### Technical features
 - Builder pattern for query construction
 - Automatic PostgreSQL type casting
-- Connection pool management
 - Error handling and logging
 - Serialization/deserialization support
 - Custom base query support
-- Multi-tenancy capabilities
 
-### Query Features
+### Query features
 - Case-insensitive search
 - Multiple column search
 - Complex filtering conditions
@@ -44,9 +44,68 @@ A flexible, type-safe query builder for handling paginated queries in Rust with 
 - Customizable page size
 - Result count optimization
 
-## Why Use This Library
+## Market analysis
 
-### Problems Solved
+### Current ecosystem gaps
+
+1. **Query builders**
+   - Diesel: Full ORM, can be heavyweight
+   - SQLx: Great low-level toolkit but no high-level query building
+   - SeaQuery: Generic and verbose, SQL builder but lacks PostgreSQL-specific features
+   - sqlbuilder: Basic SQL building without pagination or security
+
+2. **Missing features in existing solutions**
+   - Type-safe pagination
+   - Built-in SQL injection protection
+   - System table access control
+   - Easy integration with web frameworks
+   - Automatic type casting
+   - Typesafe search/filter/sort/pagination capabilities
+
+### Unique selling points
+
+1. **Security-first Approach**
+   ```rust
+   let builder = ProtectedQueryBuilder::new()
+       .add_condition("name", "=", "value")  // Safe by default
+       .add_condition("ctid", "=", "1.1");   // Protected system columns
+   ```
+
+2. **Web framework integration and extensible thin sqlx layer**
+   ```rust
+   // Actix Web example
+   async fn list_users(Query(params): Query<QueryParams>) -> impl Responder {
+       let query = paginated_query_as!(User, "SELECT * FROM users")
+           .with_params(params)
+           .fetch_paginated(&pool);
+   }
+   ```
+
+3. **Type safety & ergonomics**
+   ```rust
+   // Type inference and validation
+   let params = QueryParams::<User>::new()
+       .pagination(1, 10)
+       .sort("created_at", SortDirection::Descending)
+       .search("john", vec!["name", "email"]);
+   ```
+
+### Target audience
+
+1. **Primary users**
+   - Rust web developers using PostgreSQL
+   - Teams needing secure query building
+   - Projects requiring pagination APIs
+   - SQLx users wanting higher-level abstractions
+
+2. **Use cases**
+   - REST APIs with pagination
+   - Admin panels
+   - Data exploration interfaces
+
+## Why this library
+
+### Problems solved
 1. **Boilerplate Reduction**
    - Eliminates repetitive query building code
    - Standardizes pagination handling
@@ -67,7 +126,8 @@ A flexible, type-safe query builder for handling paginated queries in Rust with 
    - Supports complex queries
    - Adaptable to various use cases
 
-### Compared to Alternatives
+
+### Compared to alternatives
 - Type-safe compared to raw SQL
 - More flexible than ORM solutions
 - Better performance than query builders
@@ -84,10 +144,10 @@ serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
 
-## Quick Start
+## Quick start
 
 ```rust
-use your_crate::paginated_query_as;
+use sqlx_addons::paginated_query_as;
 
 #[derive(sqlx::FromRow, serde::Serialize)]
 struct User {
@@ -109,20 +169,104 @@ async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error
 }
 ```
 
-## API Documentation
+## API documentation
 
-### QueryParams Builder
+### Defaults & constraints overview
+The query builder comes with predefined defaults to ensure consistent behavior and performance across your application. These defaults can be customized based on your needs while maintaining safe boundaries for your API.
+
+### Pagination defaults
+| Constant | Value | Description |
+|----------|---------|-------------|
+| `DEFAULT_PAGE` | 1 | Starting page number |
+| `DEFAULT_MIN_PAGE_SIZE` | 10 | Minimum items per page |
+| `DEFAULT_MAX_PAGE_SIZE` | 50 | Maximum items per page |
+
+### Field constraints
+| Constant | Value | Description |
+|----------|---------|-------------|
+| `DEFAULT_MIN_FIELD_LENGTH` | 1 | Minimum search term length |
+| `DEFAULT_MAX_FIELD_LENGTH` | 100 | Maximum search term length |
+
+### Search configuration
 ```rust
-pub struct QueryParams<T> {
-    pub pagination: PaginationParams,
-    pub sort: SortParams,
-    pub search: SearchParams,
-    pub date_range: DateRangeParams,
-    pub filters: HashMap<String, Option<String>>,
-}
+// Default columns used for search operations when none specified
+pub const DEFAULT_SEARCH_COLUMNS: [&str; 2] = [
+    "name",
+    "description"
+];
 ```
 
-### Methods
+### Default behaviors
+
+#### 🔄 Pagination
+- Starts at page 1 if not specified
+- Uses minimum page size (10) if not specified
+- Automatically clamps page size between 10 and 50
+- Returns total count and total pages
+
+#### 🔍 Search
+- Ignores empty search terms
+- Truncates terms exceeding 100 characters
+- Falls back to default columns if none specified
+- Case-insensitive by default
+
+#### 📑 Sorting
+- Default field: `"created_at"`
+- Default direction: `Descending`
+- Validates sort fields against model
+
+### Examples
+
+#### Using defaults
+```rust
+let params = QueryParams::<User>::new().build();
+// Results in:
+// - Page 1
+// - 10 items per page
+// - Sorted by created_at DESC
+```
+
+#### Customizing defaults
+```rust
+let params = QueryParams::<User>::new()
+    .pagination(2, 30)          // Page 2, 30 items
+    .search(                    // Custom search
+        "john",
+        vec!["email", "username"]
+    )
+    .sort(                      // Custom sort
+        "last_login",
+        SortDirection::Ascending
+    )
+    .build();
+```
+
+#### Working with constraints
+```rust
+// Page size will be clamped
+let params = QueryParams::<User>::new()
+    .pagination(1, 100)  // Will be clamped to 50
+    .build();
+
+// Search term will be truncated
+let long_search = "a".repeat(150);  // Will be truncated to 100 chars
+let params = QueryParams::<User>::new()
+    .search(long_search, vec!["name"])
+    .build();
+```
+
+### HTTP query Parameters
+```
+GET /api/users
+    ?page=1               // Defaults to 1
+    &page_size=20        // Clamped between 10-50
+    &sort_field=name     // Optional, defaults to created_at
+    &sort_direction=asc  // Optional, defaults to desc
+    &search=john         // Optional
+    &search_columns=email,username  // Optional
+```
+
+### Chaining methods
 
 #### Pagination
 ```rust
@@ -163,7 +307,7 @@ fn filters(filters: HashMap<String, Option<String>>) -> Self
 .filter("status", Some("active"))
 ```
 
-#### Date Range
+#### Date range
 ```rust
 /// Set date range for filtering
 fn date_range(after: Option<DateTime<Utc>>, before: Option<DateTime<Utc>>) -> Self
@@ -172,7 +316,7 @@ fn date_range(after: Option<DateTime<Utc>>, before: Option<DateTime<Utc>>) -> Se
 .date_range(Some(Utc::now() - Duration::days(7)), None)
 ```
 
-### Response Type
+### Response type
 ```rust
 pub struct PaginatedResponse<T> {
     pub records: Vec<T>,
@@ -182,7 +326,7 @@ pub struct PaginatedResponse<T> {
 }
 ```
 
-### Query Parameters from HTTP
+### Query parameters from HTTP
 ```
 GET /api/users?
     page=1&
@@ -194,7 +338,7 @@ GET /api/users?
     status=active
 ```
 
-### Response Format
+### Response format
 ```json
 {
   "records": [...],
@@ -205,22 +349,22 @@ GET /api/users?
 }
 ```
 
-## Framework Integration
+## Framework integration
 
-### Actix Web Integration
+### Actix Web integration
 
 #### Setup
 ```toml
 [dependencies]
-actix-web = "4.0"
+actix-web = "4.*"
 ```
 
-#### Basic Handler
+#### Basic Actix handler
 ```rust
-use actix_web::{web, HttpResponse};
+use actix_web::{web, Data, Query, HttpResponse};
 
 pub async fn get_users(
-    pool: web::Data<PgPool>,
+    pool: Data<PgPool>,
     Query(params): Query<FlatQueryParams>,
 ) -> HttpResponse {
     match paginated_query_as!(User, "SELECT * FROM users")
@@ -239,15 +383,19 @@ pub async fn get_users(
 }
 ```
 
-#### Advanced Handler with Custom Logic
+#### Advanced handler with extended filters and extra SQL logic
+Notice how the params from the `Data` extractor (extracted from the request) can be extended further programmatically with extra filters.
 ```rust
+use actix_web::{web, Data, Query, HttpResponse};
+
 pub async fn get_users_custom(
     req: HttpRequest,
-    pool: web::Data<PgPool>,
+    pool: Data<PgPool>,
     Query(params): Query<FlatQueryParams>,
 ) -> Result<HttpResponse, Error> {
     let params = QueryParams::<User>::from(params)
         .filter("status", Some("active"))
+        .filter("email", Some("exact@match"))
         .sort("created_at", SortDirection::Descending)
         .build();
 
@@ -271,34 +419,9 @@ pub async fn get_users_custom(
 }
 ```
 
-#### App Configuration
-```rust
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect("postgres://localhost/db")
-        .await
-        .expect("Failed to create pool");
+## Advanced usage
 
-    HttpServer::new(move || {
-        App::new()
-            .app_data(web::Data::new(pool.clone()))
-            .service(
-                web::scope("/api")
-                    .route("/users", web::get().to(get_users))
-                    .route("/users/custom", web::get().to(get_users_custom))
-            )
-    })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await
-}
-```
-
-## Advanced Usage
-
-### Custom Base Queries
+### Custom base queries
 ```rust
 let base_query = r#"
     SELECT 
@@ -316,7 +439,7 @@ paginated_query_as!(User, base_query)
     .await
 ```
 
-### Complex Filtering
+### Complex filtering
 ```rust
 let params = QueryParams::<User>::new()
     .filter("status", Some("active"))
@@ -328,7 +451,43 @@ let params = QueryParams::<User>::new()
     .build();
 ```
 
-### Error Handling
+### Extra granularity to query configuration
+```rust
+pub fn custom_build_query<T>(params: &QueryParams<T>) -> (Vec<String>, PgArguments)
+where
+    T: Default + Serialize,
+{
+    QueryBuilder::<T>::new()
+        .add_search(params)
+        .add_filters(params)
+        .add_date_range(params)
+        .add_raw_condition("complex SQL")
+        .add_combined_conditions(|builder| {
+            if builder.has_column("status") && builder.has_column("role") {
+                builder
+                    .conditions
+                    .push("(status = 'active' AND role IN ('admin', 'user'))".to_string());
+            }
+            if builder.has_column("score") {
+                builder
+                    .conditions
+                    .push("score BETWEEN $1 AND $2".to_string());
+                let _ = builder.arguments.add(50);
+                let _ = builder.arguments.add(100);
+            }
+        })
+        .build()
+}
+
+// Using custom builder
+let users = paginated_query_as!(User, "SELECT * FROM users")
+.with_params(params.clone())
+.with_query_builder(custom_build_query::<User>) 
+.fetch_paginated(&pool)
+.await?;
+```
+
+### Error handling
 ```rust
 match result {
     Ok(users) => HttpResponse::Ok().json(users),
@@ -346,7 +505,7 @@ match result {
 }
 ```
 
-## Best Practices
+## Best practices
 
 ### Performance
 1. Use appropriate indexes for searched columns

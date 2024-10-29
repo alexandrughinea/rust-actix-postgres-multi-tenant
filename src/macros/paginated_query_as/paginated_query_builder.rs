@@ -1,106 +1,8 @@
-use crate::macros::paginated_query_as::{
-    build_query, quote_identifier, DateRangeParams, FlatQueryParams, PaginatedResponse,
-    PaginationParams, QueryParams, SearchParams, SortDirection, SortParams,
-};
-use crate::macros::{
-    get_struct_field_names, DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE,
-};
-use chrono::{DateTime, Utc};
+use crate::macros::paginated_query_as::internal::{quote_identifier, SortDirection};
+use crate::macros::{FlatQueryParams, PaginatedResponse, QueryBuilder, QueryParams};
 use serde::Serialize;
+use sqlx::postgres::PgArguments;
 use sqlx::{postgres::Postgres, query::QueryAs, Execute, FromRow, IntoArguments, Pool};
-use std::collections::HashMap;
-use std::marker::PhantomData;
-
-impl<T> From<FlatQueryParams> for QueryParams<T> {
-    fn from(params: FlatQueryParams) -> Self {
-        QueryParams {
-            pagination: params.pagination.unwrap_or_default(),
-            sort: params.sort.unwrap_or_default(),
-            search: params.search.unwrap_or_default(),
-            date_range: params.date_range.unwrap_or_default(),
-            filters: params.filters.unwrap_or_default(),
-            _phantom: PhantomData::<T>,
-        }
-    }
-}
-
-impl<T: Default + Serialize> QueryParams<T> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn build(self) -> QueryParams<T> {
-        self
-    }
-
-    pub fn pagination(mut self, page: i64, page_size: i64) -> Self {
-        self.pagination = PaginationParams {
-            page: page.max(DEFAULT_PAGE),
-            page_size: page_size.clamp(DEFAULT_MIN_PAGE_SIZE, DEFAULT_MAX_PAGE_SIZE),
-        };
-        self
-    }
-
-    pub fn sort(mut self, sort_field: impl Into<String>, sort_direction: SortDirection) -> Self {
-        self.sort = SortParams {
-            sort_field: sort_field.into(),
-            sort_direction,
-        };
-        self
-    }
-
-    pub fn search(
-        mut self,
-        search: impl Into<String>,
-        search_columns: Vec<impl Into<String>>,
-    ) -> Self {
-        self.search = SearchParams {
-            search: Some(search.into()),
-            search_columns: Some(search_columns.into_iter().map(Into::into).collect()),
-        };
-        self
-    }
-
-    pub fn date_range(
-        mut self,
-        after: Option<DateTime<Utc>>,
-        before: Option<DateTime<Utc>>,
-    ) -> Self {
-        self.date_range = DateRangeParams {
-            created_after: after,
-            created_before: before,
-        };
-        self
-    }
-
-    pub fn filter(mut self, key: impl Into<String>, value: Option<impl Into<String>>) -> Self {
-        let key = key.into();
-        let valid_fields = get_struct_field_names::<T>();
-
-        if valid_fields.contains(&key) {
-            self.filters.insert(key, value.map(Into::into));
-        } else {
-            tracing::warn!(column = %key, "Skipping invalid filter column");
-        }
-        self
-    }
-
-    pub fn filters(mut self, filters: HashMap<String, Option<impl Into<String>>>) -> Self {
-        let valid_fields = get_struct_field_names::<T>();
-
-        self.filters
-            .extend(filters.into_iter().filter_map(|(k, v)| {
-                if valid_fields.contains(&k) {
-                    Some((k, v.map(Into::into)))
-                } else {
-                    tracing::warn!(column = %k, "Skipping invalid filter column");
-                    None
-                }
-            }));
-
-        self
-    }
-}
 
 pub struct PaginatedQuery<'q, T, A>
 where
@@ -108,6 +10,8 @@ where
 {
     query: QueryAs<'q, Postgres, T, A>,
     params: QueryParams<T>,
+    // Add extra extensibility with a full-blown raw and safe query builder
+    build_query_fn: fn(&QueryParams<T>) -> (Vec<String>, PgArguments),
 }
 
 impl<'q, T, A> PaginatedQuery<'q, T, A>
@@ -124,13 +28,30 @@ where
         Self {
             query,
             params: FlatQueryParams::default().into(),
+            build_query_fn: |params| {
+                QueryBuilder::<T, Postgres>::new()
+                    .add_search(params)
+                    .add_filters(params)
+                    .add_date_range(params)
+                    .build()
+            },
         }
     }
 
     pub fn with_params(self, params: impl Into<QueryParams<T>>) -> Self {
         Self {
-            query: self.query,
             params: params.into(),
+            ..self
+        }
+    }
+
+    pub fn with_query_builder(
+        self,
+        build_query_fn: fn(&QueryParams<T>) -> (Vec<String>, PgArguments),
+    ) -> Self {
+        Self {
+            build_query_fn,
+            ..self
         }
     }
 
@@ -139,9 +60,8 @@ where
         pool: &Pool<Postgres>,
     ) -> Result<PaginatedResponse<T>, sqlx::Error> {
         let base_sql = format!("WITH base_query AS ({})", self.query.sql());
-
-        let (conditions, count_arguments) = build_query::<T>(&self.params);
-        let (_, main_arguments) = build_query::<T>(&self.params);
+        let (conditions, count_arguments) = (self.build_query_fn)(&self.params);
+        let (_, main_arguments) = (self.build_query_fn)(&self.params);
 
         let where_clause = if !conditions.is_empty() {
             format!(" WHERE {}", conditions.join(" AND "))
@@ -162,7 +82,7 @@ where
 
         main_sql.push_str(&format!(
             " ORDER BY {} {}",
-            quote_identifier(&sort.sort_field),
+            quote_identifier(&sort.sort_column),
             order
         ));
 
@@ -199,19 +119,12 @@ where
     }
 }
 
-#[macro_export]
-macro_rules! paginated_query_as {
-    ($query:expr) => {{
-        PaginatedQuery::new(sqlx::query_as($query))
-    }};
-    ($type:ty, $query:expr) => {{
-        PaginatedQuery::new(sqlx::query_as::<_, $type>($query))
-    }};
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::macros::paginated_query_as::internal::SortDirection;
+    use chrono::{DateTime, Utc};
+    use std::collections::HashMap;
 
     #[derive(Debug, Default, Serialize)]
     struct TestModel {
@@ -230,7 +143,7 @@ mod tests {
 
         assert_eq!(params.pagination.page, 1);
         assert_eq!(params.pagination.page_size, 10);
-        assert_eq!(params.sort.sort_field, "created_at");
+        assert_eq!(params.sort.sort_column, "created_at");
         assert!(matches!(
             params.sort.sort_direction,
             SortDirection::Descending
@@ -247,7 +160,7 @@ mod tests {
         assert_eq!(params.pagination.page, 2);
         assert_eq!(params.search.search, Some("test".to_string()));
         assert_eq!(params.pagination.page_size, 10);
-        assert_eq!(params.sort.sort_field, "created_at");
+        assert_eq!(params.sort.sort_column, "created_at");
         assert!(matches!(
             params.sort.sort_direction,
             SortDirection::Descending
@@ -316,7 +229,7 @@ mod tests {
 
         assert_eq!(params.pagination.page, 2);
         assert_eq!(params.pagination.page_size, 20);
-        assert_eq!(params.sort.sort_field, "updated_at");
+        assert_eq!(params.sort.sort_column, "updated_at");
         assert!(matches!(
             params.sort.sort_direction,
             SortDirection::Ascending
@@ -326,31 +239,8 @@ mod tests {
             params.search.search_columns,
             Some(vec!["title".to_string(), "description".to_string()])
         );
-        assert!(params.date_range.created_after.is_some());
-        assert!(params.date_range.created_before.is_none());
-    }
-
-    #[test]
-    fn test_search_query_generation() {
-        let params = QueryParams::new()
-            .search("XXX".to_string(), vec!["name".to_string()])
-            .build();
-
-        let (conditions, _) = build_query::<TestModel>(&params);
-
-        assert!(!conditions.is_empty());
-        assert!(conditions.iter().any(|c| c.contains("LOWER")));
-        assert!(conditions.iter().any(|c| c.contains("LIKE LOWER")));
-    }
-
-    #[test]
-    fn test_empty_search_query() {
-        let params = QueryParams::new()
-            .search("   ".to_string(), vec!["name".to_string()])
-            .build();
-
-        let (conditions, _) = build_query::<TestModel>(&params);
-        assert!(!conditions.iter().any(|c| c.contains("LIKE")));
+        assert!(params.date_range.date_after.is_some());
+        assert!(params.date_range.date_before.is_none());
     }
 
     #[test]

@@ -1,21 +1,11 @@
-use crate::macros::paginated_query_as::{
-    default_page, default_page_size, default_search_columns, default_sort_direction,
-    default_sort_field, deserialize_page, deserialize_page_size, deserialize_search,
-    deserialize_search_columns,
+use crate::macros::paginated_query_as::internal::{
+    default_date_range_column, default_page, default_page_size, default_search_columns,
+    default_sort_column, default_sort_direction, deserialize_page, deserialize_page_size,
+    deserialize_search, deserialize_search_columns,
 };
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::marker::PhantomData;
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct PaginatedResponse<T> {
-    pub records: Vec<T>,
-    pub total: i64,
-    #[serde(flatten)]
-    pub pagination: PaginationParams,
-    pub total_pages: i64,
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -41,8 +31,8 @@ impl Default for PaginationParams {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SortParams {
-    #[serde(default = "default_sort_field")]
-    pub sort_field: String,
+    #[serde(default = "default_sort_column")]
+    pub sort_column: String,
     #[serde(default = "default_sort_direction")]
     pub sort_direction: SortDirection,
 }
@@ -50,7 +40,7 @@ pub struct SortParams {
 impl Default for SortParams {
     fn default() -> Self {
         Self {
-            sort_field: default_sort_field(),
+            sort_column: default_sort_column(),
             sort_direction: default_sort_direction(),
         }
     }
@@ -80,8 +70,10 @@ impl Default for SearchParams {
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct DateRangeParams {
-    pub created_after: Option<DateTime<Utc>>,
-    pub created_before: Option<DateTime<Utc>>,
+    #[serde(default = "default_date_range_column")]
+    pub date_column: Option<String>,
+    pub date_after: Option<DateTime<Utc>>,
+    pub date_before: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -89,28 +81,4 @@ pub enum SortDirection {
     Ascending,
     #[default]
     Descending,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct FlatQueryParams {
-    #[serde(flatten)]
-    pub pagination: Option<PaginationParams>,
-    #[serde(flatten)]
-    pub sort: Option<SortParams>,
-    #[serde(flatten)]
-    pub search: Option<SearchParams>,
-    #[serde(flatten)]
-    pub date_range: Option<DateRangeParams>,
-    #[serde(flatten)]
-    pub filters: Option<HashMap<String, Option<String>>>,
-}
-
-#[derive(Debug, Default)]
-pub struct QueryParams<T> {
-    pub pagination: PaginationParams,
-    pub sort: SortParams,
-    pub search: SearchParams,
-    pub date_range: DateRangeParams,
-    pub filters: HashMap<String, Option<String>>,
-    pub(crate) _phantom: PhantomData<T>,
 }

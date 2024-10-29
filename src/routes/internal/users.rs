@@ -19,7 +19,7 @@ pub async fn get_users(
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
-    Query(query_params): Query<FlatQueryParams>,
+    Query(params): Query<FlatQueryParams>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
@@ -31,7 +31,7 @@ pub async fn get_users(
     };
 
     let users = paginated_query_as!(User, "SELECT * FROM users")
-        .with_params(query_params)
+        .with_params(params)
         .fetch_paginated(&tenant_pool)
         .await
         .unwrap();
