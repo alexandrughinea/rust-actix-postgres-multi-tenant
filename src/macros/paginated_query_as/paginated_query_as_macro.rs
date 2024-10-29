@@ -1,5 +1,5 @@
 use crate::macros::paginated_query_as::{
-    build_pg_arguments, quote_identifier, DateRangeParams, FlatQueryParams, PaginatedResponse,
+    build_query, quote_identifier, DateRangeParams, FlatQueryParams, PaginatedResponse,
     PaginationParams, QueryParams, SearchParams, SortDirection, SortParams,
 };
 use crate::macros::{
@@ -140,8 +140,8 @@ where
     ) -> Result<PaginatedResponse<T>, sqlx::Error> {
         let base_sql = format!("WITH base_query AS ({})", self.query.sql());
 
-        let (conditions, count_arguments) = build_pg_arguments::<T>(&self.params);
-        let (_, main_arguments) = build_pg_arguments::<T>(&self.params);
+        let (conditions, count_arguments) = build_query::<T>(&self.params);
+        let (_, main_arguments) = build_query::<T>(&self.params);
 
         let where_clause = if !conditions.is_empty() {
             format!(" WHERE {}", conditions.join(" AND "))
@@ -336,7 +336,7 @@ mod tests {
             .search("XXX".to_string(), vec!["name".to_string()])
             .build();
 
-        let (conditions, _) = build_pg_arguments::<TestModel>(&params);
+        let (conditions, _) = build_query::<TestModel>(&params);
 
         assert!(!conditions.is_empty());
         assert!(conditions.iter().any(|c| c.contains("LOWER")));
@@ -349,7 +349,7 @@ mod tests {
             .search("   ".to_string(), vec!["name".to_string()])
             .build();
 
-        let (conditions, _) = build_pg_arguments::<TestModel>(&params);
+        let (conditions, _) = build_query::<TestModel>(&params);
         assert!(!conditions.iter().any(|c| c.contains("LIKE")));
     }
 

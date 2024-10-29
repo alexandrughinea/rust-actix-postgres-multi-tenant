@@ -85,7 +85,6 @@ pub struct DateRangeParams {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[serde(rename_all = "snake_case")]
 pub enum SortDirection {
     Ascending,
     #[default]
