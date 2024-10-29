@@ -1,5 +1,4 @@
 pub mod configurations;
-pub mod macros;
 pub mod migrations;
 pub mod models;
 pub mod routes;
