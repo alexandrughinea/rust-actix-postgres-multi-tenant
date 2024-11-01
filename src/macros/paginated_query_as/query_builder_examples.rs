@@ -49,7 +49,6 @@ where
         .build()
 }
 
-#[allow(dead_code)]
 pub fn build_query_with_safe_defaults<T>(params: &QueryParams<T>) -> (Vec<String>, PgArguments)
 where
     T: Default + Serialize,
@@ -98,7 +97,7 @@ mod test {
     #[test]
     fn test_search_query_generation() {
         let params = QueryParams::new()
-            .search("XXX".to_string(), vec!["name".to_string()])
+            .add_search("XXX".to_string(), vec!["name".to_string()])
             .build();
 
         let (conditions, _) = build_query_with_safe_defaults::<TestModel>(&params);
@@ -111,7 +110,7 @@ mod test {
     #[test]
     fn test_empty_search_query() {
         let params = QueryParams::new()
-            .search("   ".to_string(), vec!["name".to_string()])
+            .add_search("   ".to_string(), vec!["name".to_string()])
             .build();
 
         let (conditions, _) = build_query_with_safe_defaults::<TestModel>(&params);

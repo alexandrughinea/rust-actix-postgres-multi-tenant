@@ -1,5 +1,6 @@
 use crate::configurations::Configuration;
-use crate::macros::{FlatQueryParams, PaginatedQuery};
+use crate::macros::{FlatQueryParams, PaginatedQuery, PostgresAdapter};
+use crate::macros::{QueryBuilder, QueryParams};
 use crate::models::{AppState, User};
 use crate::paginated_query_as;
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
@@ -7,7 +8,10 @@ use actix_web::web::Query;
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_validator::Json;
 use serde_json::json;
+use sqlx::Execute;
 use sqlx::PgPool;
+use sqlx::Postgres;
+use std::collections::HashMap;
 
 pub(crate) fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("", web::post().to(create_user))
@@ -19,7 +23,7 @@ pub async fn get_users(
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
-    Query(params): Query<FlatQueryParams>,
+    Query(params): web::Query<FlatQueryParams>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
@@ -30,6 +34,7 @@ pub async fn get_users(
         Err(e) => return e,
     };
 
+    // Create the adapter with the built conditions and arguments
     let users = paginated_query_as!(User, "SELECT * FROM users")
         .with_params(params)
         .fetch_paginated(&tenant_pool)
