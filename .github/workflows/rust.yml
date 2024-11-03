@@ -49,6 +49,14 @@ jobs:
       - name: Install the Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Verify SSH connection
+        run: ssh -o StrictHostKeyChecking=no git@github.com || echo "Connection check failed"
+
       - name: Install sqlx-cli
         run:
           cargo install sqlx-cli
