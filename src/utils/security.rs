@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_aes_gcm() {
-        let encrypted = encrypt_aes_gcm(&AES_KEY_HEX, ORIGINAL_MESSAGE).unwrap();
+        let encrypted = encrypt_aes_gcm(AES_KEY_HEX, ORIGINAL_MESSAGE).unwrap();
 
         println!("Encrypted: {}", encrypted);
 
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_aes_gcm() {
-        let decrypted = decrypt_aes_gcm(&AES_KEY_HEX, ENCRYPTED_ORIGINAL_MESSAGE).unwrap();
+        let decrypted = decrypt_aes_gcm(AES_KEY_HEX, ENCRYPTED_ORIGINAL_MESSAGE).unwrap();
 
         assert_eq!(decrypted, ORIGINAL_MESSAGE);
     }

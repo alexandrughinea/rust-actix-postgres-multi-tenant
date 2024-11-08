@@ -5,23 +5,23 @@ meta {
 }
 
 get {
-  url: {{host}}/v1/internal/users?sort_direction=ascending
+  url: {{host}}/v1/internal/users
   body: none
   auth: none
 }
 
 params:query {
-  sort_direction: ascending
-  ~search: alex
-  ~confirmed: false
+  ~search: Test
   ~confirmed: true
-  ~page_size: 3
-  ~page: 2
-  ~created_before: 
-  ~created_after: 
+  ~date_before: 2024-11-03T12:30:12.081598Z
+  ~date_after: 2024-11-02T12:30:12.081598Z
+  ~search_columns: last_name,first_name
+  ~sort_direction: ascending
+  ~page: 1
+  ~page_size: 11
+  ~confirmed: false
   ~sort_column: created_at
   ~sort_direction: descending
-  ~search_columns: last_name,first_name
 }
 
 headers {

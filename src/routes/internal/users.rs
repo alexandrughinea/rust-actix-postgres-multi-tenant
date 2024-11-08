@@ -1,12 +1,10 @@
 use crate::configurations::Configuration;
 use crate::models::{AppState, User};
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
-use actix_web::web::Query;
 use actix_web::{web, HttpRequest, HttpResponse};
-use actix_web_validator::Json;
 use serde_json::json;
 use sqlx::PgPool;
-use sqlx_paginated::{paginated_query_as, FlatQueryParams, PaginatedQueryBuilder};
+use sqlx_paginated::{paginated_query_as, FlatQueryParams};
 
 pub(crate) fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("", web::post().to(create_user))
@@ -18,7 +16,7 @@ pub async fn get_users(
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
-    Query(params): Query<FlatQueryParams>,
+    web::Query(params): web::Query<FlatQueryParams>,
 ) -> HttpResponse {
     let tenant_id = match get_tenant_id_from_request(&req) {
         Ok(id) => id,
@@ -40,7 +38,7 @@ pub async fn get_users(
 
 pub async fn create_user(
     req: HttpRequest,
-    user: Json<User>,
+    user: web::Json<User>,
     state: web::Data<AppState>,
     pool: web::Data<PgPool>,
     configuration: web::Data<Configuration>,
