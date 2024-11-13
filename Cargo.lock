@@ -534,9 +534,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.1.37"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40545c26d092346d8a8dab71ee48e7685a7a9cba76e634790c215b41a4a7b4cf"
+checksum = "1aeb932158bd710538c73702db6945cb68a8fb08c519e6e12706b94263b36db8"
 dependencies = [
  "jobserver",
  "libc",
@@ -2631,9 +2631,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx-paginated"
-version = "0.2.22"
+version = "0.2.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c31570e97056fb00aeaaeed492bbd7a5fe0a7fe863a7f2033bf242bc1424cc50"
+checksum = "ee26582ac784562241d86a0e0325aa7b16bdb38cb13102a8c6e826946b20e0d9"
 dependencies = [
  "chrono",
  "hex",
