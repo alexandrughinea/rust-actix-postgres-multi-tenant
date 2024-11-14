@@ -55,4 +55,4 @@ aes-gcm = "0.10.3"
 hex = "0.4.3"
 rand = "0.8.5"
 actix-web-validator = "6.0.0"
-validator = { version = "0.18.1", features = ["derive"] }
+validator = { version = "0.19.0", features = ["derive"] }
