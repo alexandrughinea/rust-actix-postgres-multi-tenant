@@ -6,6 +6,7 @@ use chrono::Utc;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -46,12 +47,41 @@ pub async fn get_pool_for_tenant(
         host: configuration.database.host.clone(),
         database_name: configuration.database.database_name.clone(),
         require_ssl: configuration.database.require_ssl,
-        max_connections: configuration.database.max_connections,
-        idle_timeout: configuration.database.idle_timeout,
+        min_connections: None,
+        max_connections: None,
+        acquire_timeout: None,
+        max_lifetime: None,
+        idle_timeout: None,
     };
     let connect_options = database_configuration.with_db();
+    let mut pool_options = PgPoolOptions::new();
 
-    let pool = PgPoolOptions::new()
+    // Only set min_connections if provided
+    if let Some(min_connections) = configuration.database.min_connections {
+        pool_options = pool_options.min_connections(min_connections);
+    }
+
+    // Only set max_connections if provided
+    if let Some(max_connections) = configuration.database.max_connections {
+        pool_options = pool_options.max_connections(max_connections);
+    }
+
+    // Only set acquire_timeout if provided
+    if let Some(acquire_timeout) = configuration.database.acquire_timeout {
+        pool_options = pool_options.acquire_timeout(Duration::from_millis(acquire_timeout));
+    }
+
+    // Only set max_lifetime if provided
+    if let Some(max_lifetime) = configuration.database.max_lifetime {
+        pool_options = pool_options.max_lifetime(Duration::from_secs(max_lifetime));
+    }
+
+    // Only set idle_timeout if provided
+    if let Some(idle) = configuration.database.idle_timeout {
+        pool_options = pool_options.idle_timeout(Duration::from_secs(idle));
+    }
+
+    let pool = pool_options
         .connect_with(connect_options)
         .await
         .map_err(|_| {

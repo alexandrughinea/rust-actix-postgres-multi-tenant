@@ -1,0 +1,162 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="800" height="500" fill="#f8f9fa"/>
+    
+    <!-- Grid lines -->
+    <g stroke="#e9ecef" stroke-width="1">
+        <line x1="100" y1="50" x2="100" y2="400"/>
+        <line x1="200" y1="50" x2="200" y2="400"/>
+        <line x1="300" y1="50" x2="300" y2="400"/>
+        <line x1="400" y1="50" x2="400" y2="400"/>
+        <line x1="500" y1="50" x2="500" y2="400"/>
+        <line x1="600" y1="50" x2="600" y2="400"/>
+        <line x1="700" y1="50" x2="700" y2="400"/>
+        
+        <line x1="100" y1="100" x2="700" y2="100"/>
+        <line x1="100" y1="150" x2="700" y2="150"/>
+        <line x1="100" y1="200" x2="700" y2="200"/>
+        <line x1="100" y1="250" x2="700" y2="250"/>
+        <line x1="100" y1="300" x2="700" y2="300"/>
+        <line x1="100" y1="350" x2="700" y2="350"/>
+        <line x1="100" y1="400" x2="700" y2="400"/>
+    </g>
+    
+    <!-- CPU Usage Line -->
+    <path d="M100,352 L300,369 L500,381 L700,346" 
+          stroke="#4263eb" 
+          stroke-width="2" 
+          fill="none"/>
+          
+    <!-- Connection Pool Usage -->
+    <path d="M100,390 L300,150 L500,120 L700,110" 
+          stroke="#40c057" 
+          stroke-width="2" 
+          fill="none"
+          stroke-dasharray="5,5"/>
+          
+    <!-- Memory Usage -->
+    <path d="M100,308 L300,310 L500,308 L700,306" 
+          stroke="#fcc419" 
+          stroke-width="2" 
+          fill="none"/>
+
+    <!-- Throughput Line -->
+    <path d="M100,370 L300,340 L500,300 L700,200" 
+          stroke="#82ca9d" 
+          stroke-width="2" 
+          fill="none"/>
+
+    <!-- Response Time Line -->
+    <path d="M100,395 L300,393 L500,250 L700,100" 
+          stroke="#8884d8" 
+          stroke-width="2" 
+          fill="none"/>
+    
+    <!-- Error Rate Line -->
+    <path d="M100,400 L300,400 L500,200 L700,100" 
+          stroke="#ff6b6b" 
+          stroke-width="2" 
+          fill="none"/>
+
+    <!-- Data Points for CPU with labels -->
+    <g fill="#4263eb">
+        <circle cx="100" cy="352" r="3"/>
+        <circle cx="300" cy="369" r="3"/>
+        <circle cx="500" cy="381" r="3"/>
+        <circle cx="700" cy="346" r="3"/>
+        
+        <text x="90" y="352" text-anchor="end" font-size="10">19%</text>
+        <text x="290" y="369" text-anchor="end" font-size="10">7.7%</text>
+        <text x="490" y="381" text-anchor="end" font-size="10">4.7%</text>
+        <text x="690" y="346" text-anchor="end" font-size="10">13.4%</text>
+    </g>
+
+    <!-- Data Points for Memory with labels -->
+    <g fill="#fcc419">
+        <circle cx="100" cy="308" r="3"/>
+        <circle cx="300" cy="310" r="3"/>
+        <circle cx="500" cy="308" r="3"/>
+        <circle cx="700" cy="306" r="3"/>
+        
+        <text x="90" y="308" text-anchor="end" font-size="10">28%</text>
+        <text x="290" y="310" text-anchor="end" font-size="10">27.1%</text>
+        <text x="490" y="308" text-anchor="end" font-size="10">27.6%</text>
+        <text x="690" y="306" text-anchor="end" font-size="10">28.3%</text>
+    </g>
+
+    <!-- Performance Data -->
+    <g fill="#82ca9d">
+        <text x="90" y="370" text-anchor="end" font-size="10">91 req/s</text>
+        <text x="290" y="340" text-anchor="end" font-size="10">130 req/s</text>
+        <text x="490" y="300" text-anchor="end" font-size="10">148 req/s</text>
+        <text x="690" y="200" text-anchor="end" font-size="10">33 req/s</text>
+    </g>
+
+    <!-- Response Time Data -->
+    <g fill="#8884d8">
+        <text x="90" y="395" text-anchor="end" font-size="10">128ms</text>
+        <text x="290" y="393" text-anchor="end" font-size="10">174ms</text>
+        <text x="490" y="250" text-anchor="end" font-size="10">634ms</text>
+        <text x="690" y="100" text-anchor="end" font-size="10">1289ms</text>
+    </g>
+
+    <!-- Error Rate Data -->
+    <g fill="#ff6b6b">
+        <text x="90" y="400" text-anchor="end" font-size="10">0%</text>
+        <text x="290" y="400" text-anchor="end" font-size="10">0%</text>
+        <text x="490" y="200" text-anchor="end" font-size="10">0%</text>
+        <text x="690" y="100" text-anchor="end" font-size="10">44.29%</text>
+    </g>
+
+    <!-- Saturation Point Marker -->
+    <line x1="300" y1="50" x2="300" y2="400" 
+          stroke="#fa5252" 
+          stroke-width="1" 
+          stroke-dasharray="4,4"/>
+    <text x="310" y="70" font-family="Arial" font-size="12" fill="#fa5252">Optimal Load Point</text>
+    <text x="310" y="85" font-family="Arial" font-size="12" fill="#fa5252">(150 threads)</text>
+    
+    <!-- Labels -->
+    <g font-family="Arial" font-size="12">
+        <text x="100" y="420" text-anchor="middle">100</text>
+        <text x="300" y="420" text-anchor="middle">150</text>
+        <text x="500" y="420" text-anchor="middle">250</text>
+        <text x="700" y="420" text-anchor="middle">500</text>
+        <text x="400" y="450" text-anchor="middle">Concurrent Threads</text>
+        
+        <text x="80" y="400" text-anchor="end">0%</text>
+        <text x="80" y="300" text-anchor="end">30%</text>
+        <text x="80" y="200" text-anchor="end">60%</text>
+        <text x="80" y="100" text-anchor="end">90%</text>
+        <text x="80" y="50" text-anchor="end">100%</text>
+        <text x="40" y="225" text-anchor="middle" transform="rotate(-90 40 225)">Resource Utilization</text>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(550,50)">
+        <rect width="140" height="150" fill="white" stroke="#dee2e6"/>
+        <line x1="10" y1="20" x2="30" y2="20" stroke="#4263eb" stroke-width="2"/>
+        <line x1="10" y1="45" x2="30" y2="45" stroke="#40c057" stroke-width="2" stroke-dasharray="5,5"/>
+        <line x1="10" y1="70" x2="30" y2="70" stroke="#fcc419" stroke-width="2"/>
+        <line x1="10" y1="95" x2="30" y2="95" stroke="#82ca9d" stroke-width="2"/>
+        <line x1="10" y1="120" x2="30" y2="120" stroke="#8884d8" stroke-width="2"/>
+        <line x1="10" y1="145" x2="30" y2="145" stroke="#ff6b6b" stroke-width="2"/>
+        <text x="40" y="25" font-family="Arial" font-size="12">CPU Usage</text>
+        <text x="40" y="50" font-family="Arial" font-size="12">Pool Usage</text>
+        <text x="40" y="75" font-family="Arial" font-size="12">Memory Usage</text>
+        <text x="40" y="100" font-family="Arial" font-size="12">Throughput</text>
+        <text x="40" y="125" font-family="Arial" font-size="12">Response Time</text>
+        <text x="40" y="150" font-family="Arial" font-size="12">Error Rate</text>
+    </g>
+    
+    <!-- Pool Config Note -->
+    <g font-family="Arial" font-size="10">
+        <rect x="100" y="460" width="600" height="30" fill="white" stroke="#dee2e6"/>
+        <text x="110" y="480">Pool Config: min_conn=2, max_conn=4, acquire_timeout=750ms, max_lifetime=1800s, idle_timeout=300s</text>
+    </g>
+    
+    <!-- Title -->
+    <text x="400" y="30" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">
+        Resource Utilization vs Load (1vCPU, 512MB RAM) - Custom Pool
+    </text>
+</svg>

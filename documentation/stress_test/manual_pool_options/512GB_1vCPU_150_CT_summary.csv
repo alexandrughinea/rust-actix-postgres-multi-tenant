@@ -1,0 +1,3 @@
+Label,# Samples,Average,Min,Max,Std. Dev.,Error %,Throughput,Received KB/sec,Sent KB/sec,Avg. Bytes
+Thread Group:HTTP Request,1500,174,85,1108,55.25,0.000%,129.90387,344.30,33.62,2714.0
+TOTAL,1500,174,85,1108,55.25,0.000%,129.90387,344.30,33.62,2714.0

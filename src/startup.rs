@@ -13,6 +13,7 @@ use actix_web::dev::Server;
 use actix_web::web::Data;
 use actix_web::{http, web, HttpServer};
 use secrecy::ExposeSecret;
+use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::net::TcpListener;
@@ -35,12 +36,13 @@ impl Application {
             pool
         } else {
             let database_connect_options = configuration.database.with_db();
+            let mut pool_options = PgPoolOptions::new();
 
-            match sqlx::postgres::PgPoolOptions::new()
-                .max_connections(configuration.database.max_connections)
-                .connect_with(database_connect_options)
-                .await
-            {
+            if let Some(max_connections) = configuration.database.max_connections {
+                pool_options = pool_options.max_connections(max_connections);
+            }
+
+            match pool_options.connect_with(database_connect_options).await {
                 Ok(pool) => pool,
                 Err(e) => {
                     let message = format!("Couldn't establish DB connection!: {:#?}", e);

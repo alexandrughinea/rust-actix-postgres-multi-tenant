@@ -1,0 +1,94 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+    <!-- Extended height for notes -->
+    <rect width="800" height="600" fill="#f8f9fa"/>
+    
+    <!-- Grid lines -->
+    <g stroke="#e9ecef" stroke-width="1">
+        <line x1="100" y1="50" x2="100" y2="400"/>
+        <line x1="200" y1="50" x2="200" y2="400"/>
+        <line x1="300" y1="50" x2="300" y2="400"/>
+        <line x1="400" y1="50" x2="400" y2="400"/>
+        <line x1="500" y1="50" x2="500" y2="400"/>
+        <line x1="600" y1="50" x2="600" y2="400"/>
+        <line x1="700" y1="50" x2="700" y2="400"/>
+        
+        <line x1="100" y1="100" x2="700" y2="100"/>
+        <line x1="100" y1="150" x2="700" y2="150"/>
+        <line x1="100" y1="200" x2="700" y2="200"/>
+        <line x1="100" y1="250" x2="700" y2="250"/>
+        <line x1="100" y1="300" x2="700" y2="300"/>
+        <line x1="100" y1="350" x2="700" y2="350"/>
+        <line x1="100" y1="400" x2="700" y2="400"/>
+    </g>
+    
+    <!-- Bars for Requests/Second -->
+    <g>
+        <!-- Rust -->
+        <rect x="130" y="150" width="40" height="250" fill="#DE3F2C" opacity="0.8"/>
+        <!-- Node.js -->
+        <rect x="210" y="250" width="40" height="150" fill="#68A063" opacity="0.8"/>
+        <!-- Go -->
+        <rect x="290" y="200" width="40" height="200" fill="#00ADD8" opacity="0.8"/>
+        <!-- Python -->
+        <rect x="370" y="300" width="40" height="100" fill="#3776AB" opacity="0.8"/>
+        <!-- Spring -->
+        <rect x="450" y="270" width="40" height="130" fill="#6DB33F" opacity="0.8"/>
+        <!-- PHP -->
+        <rect x="530" y="290" width="40" height="110" fill="#8892BF" opacity="0.8"/>
+    </g>
+    
+    <!-- Concurrent Users Overlay (dots) -->
+    <g fill="#212529">
+        <circle cx="150" cy="150" r="4"/>
+        <circle cx="230" cy="250" r="4"/>
+        <circle cx="310" cy="200" r="4"/>
+        <circle cx="390" cy="300" r="4"/>
+        <circle cx="470" cy="270" r="4"/>
+        <circle cx="550" cy="310" r="4"/>
+    </g>
+    
+    <!-- Labels -->
+    <g font-family="Arial" font-size="12" text-anchor="middle">
+        <!-- Framework names -->
+        <text x="150" y="420">Rust</text>
+        <text x="230" y="420">Node.js</text>
+        <text x="310" y="420">Go</text>
+        <text x="390" y="420">Python</text>
+        <text x="470" y="420">Spring</text>
+        <text x="550" y="420">PHP</text>
+        
+        <!-- Y-axis labels -->
+        <text x="80" y="400" text-anchor="end">0</text>
+        <text x="80" y="300" text-anchor="end">50</text>
+        <text x="80" y="200" text-anchor="end">100</text>
+        <text x="80" y="100" text-anchor="end">150</text>
+    </g>
+    
+    <!-- Configuration Notes -->
+    <g font-family="Arial" font-size="12">
+        <rect x="100" y="460" width="600" height="100" fill="white" stroke="#dee2e6"/>
+        <text x="110" y="480" font-weight="bold">Rust Server Pool Configuration:</text>
+        <text x="110" y="500">min_connections: 2     max_connections: 4     acquire_timeout: 1500ms</text>
+        <text x="110" y="520">max_lifetime: 900s (15min)     idle_timeout: 150s (2.5min)</text>
+        <text x="110" y="540">Hardware: 1vCPU, 512MB RAM     Optimal Load: 150 concurrent threads</text>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(600, 50)">
+        <rect width="150" height="80" fill="white" stroke="#dee2e6"/>
+        <rect x="10" y="15" width="20" height="10" fill="#444" opacity="0.8"/>
+        <circle cx="20" cy="45" r="4" fill="#212529"/>
+        <text x="40" y="23" font-family="Arial" font-size="12">Requests/sec</text>
+        <text x="40" y="48" font-family="Arial" font-size="12">Concurrent Users</text>
+    </g>
+    
+    <!-- Title -->
+    <text x="400" y="30" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">
+        Framework Performance on 1vCPU
+    </text>
+    
+    <!-- Y-axis label -->
+    <text x="30" y="250" font-family="Arial" font-size="12" transform="rotate(-90, 30, 250)">
+        Requests per Second
+    </text>
+</svg>

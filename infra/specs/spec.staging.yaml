@@ -33,6 +33,16 @@ services:
       - key: APP_DATABASE__DATABASE_NAME
         scope: RUN_TIME
         value: ${staging.DATABASE}
+      - key: APP_DATABASE__MIN_CONNECTIONS
+        scope: RUN_TIME
+      - key: APP_DATABASE__MAX_CONNECTIONS
+        scope: RUN_TIME
+      - key: APP_DATABASE__ACQUIRE_TIMEOUT
+        scope: RUN_TIME
+      - key: APP_DATABASE__MAX_LIFETIME
+        scope: RUN_TIME
+      - key: APP_DATABASE__IDLE_TIMEOUT
+        scope: RUN_TIME
     dockerfile_path: Dockerfile
     source_dir: .
     github:

@@ -24,6 +24,11 @@ database:
   database_name: ${APP_DATABASE__DATABASE_NAME}
   username: ${APP_DATABASE__USERNAME}
   password: ${APP_DATABASE__PASSWORD}
+  min_connections: ${APP_DATABASE__MIN_CONNECTIONS}
+  max_connections: ${APP_DATABASE__MAX_CONNECTIONS}
+  acquire_timeout: ${APP_DATABASE__ACQUIRE_TIMEOUT}
+  max_lifetime: ${APP_DATABASE__MAX_LIFETIME}
+  idle_timeout: ${APP_DATABASE__IDLE_TIMEOUT}
   require_ssl: true
 
 redis:
