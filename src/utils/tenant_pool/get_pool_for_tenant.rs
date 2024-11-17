@@ -77,8 +77,8 @@ pub async fn get_pool_for_tenant(
     }
 
     // Only set idle_timeout if provided
-    if let Some(idle) = configuration.database.idle_timeout {
-        pool_options = pool_options.idle_timeout(Duration::from_secs(idle));
+    if let Some(idle_timeout) = configuration.database.idle_timeout {
+        pool_options = pool_options.idle_timeout(Duration::from_secs(idle_timeout));
     }
 
     let pool = pool_options

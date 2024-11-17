@@ -1,11 +1,9 @@
+use crate::deserializers::{deserialize_number_from_string, deserialize_option_number_from_string};
 use actix_session::config::CookieContentSecurity;
 use actix_web::cookie::SameSite;
 use config::{Config, ConfigError, File};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
-use serde_aux::field_attributes::{
-    deserialize_number_from_string, deserialize_option_number_from_string,
-};
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
 use std::env;
@@ -122,14 +120,19 @@ pub struct DatabaseConfiguration {
 
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+
     #[serde(deserialize_with = "deserialize_option_number_from_string")]
     pub min_connections: Option<u32>,
+
     #[serde(deserialize_with = "deserialize_option_number_from_string")]
     pub max_connections: Option<u32>,
+
     #[serde(deserialize_with = "deserialize_option_number_from_string")]
     pub acquire_timeout: Option<u64>,
+
     #[serde(deserialize_with = "deserialize_option_number_from_string")]
     pub max_lifetime: Option<u64>,
+
     #[serde(deserialize_with = "deserialize_option_number_from_string")]
     pub idle_timeout: Option<u64>,
 }
