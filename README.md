@@ -12,7 +12,9 @@ The architecture leverages the use of `Arc` (Atomic Reference Counting), `Mutex`
 - [Architecture](#architecture)
 - [Components](#components)
 - [How it Works](#how-it-works)
-- [Usage](#usage)
+- [Benefits](#benefits)
+- [Documentation](#documentation)
+- [Disclaimer](#disclaimer)
 
 ## Overview
 
@@ -159,6 +161,28 @@ classDiagram
 
 ### 5. **Cache Management**:
    - The `last_accessed` timestamp for each pool allows the system to track activity and potentially implement strategies like idle pool eviction or pool timeouts, further improving resource management.
+
+## Documentation
+
+For extra info you should really check out the `documentation/` directory.
+I have left some resources that I think could bring even more insight.
+
+It is split in three main sections:
+- Stress test results for custom and default pool settings: [stress test results](./documentation/stress_test)
+- SQL migration steps with comments:  [SQL docs](./documentation/sql)
+- [Bruno](https://github.com/usebruno/bruno) API collections: [Bruno templates](./documentation/bruno)
+
+### Stress test result example
+
+#### Result format (jmx output) [512GB_1vCPU_250_CT_summary](./documentation/stress_test/default_pool_options/512GB_1vCPU_250_CT_summary.csv):
+
+| Label                    | # Samples | Average | Min | Max  | Std. Dev. | Error % | Throughput | Received KB/sec | Sent KB/sec | Avg. Bytes |
+|--------------------------|-----------|---------|-----|------|-----------|---------|------------|----------------|-------------|------------|
+| Thread Group:HTTP Request | 5000      | 828     | 83  | 3326 | 604.89    | 0.000%  | 98.33035   | 260.61         | 25.45       | 2714.0     |
+| TOTAL                    | 5000      | 828     | 83  | 3326 | 604.89    | 0.000%  | 98.33035   | 260.61         | 25.45       | 2714.0     |
+
+#### Result graph - Resource Utilization vs Load (1vCPU, 512MB RAM) - Default Pool:
+<img src="./documentation/stress_test/default_pool_options/result-resource-utilization.svg" alt="Resource Utilization vs Load (1vCPU, 512MB RAM) - Default Pool" width="650px">
 
 ## Usage
 
