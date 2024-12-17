@@ -1,5 +1,8 @@
 # Multi-Tenant PostgreSQL Pool Management Template
 
+[![Rust](https://github.com/alexandrughinea/rust-actix-postgres-multi-tenant/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/alexandrughinea/rust-actix-postgres-multi-tenant/actions/workflows/rust.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 This project implements a multi-tenant connection pooling strategy for PostgreSQL using Rust. 
 It dynamically manages database connection pools for tenants based on their unique identifiers (UUIDs). 
 The architecture leverages the use of `Arc` (Atomic Reference Counting), `Mutex`, and SQLx to ensure efficient, safe, and scalable connection management in a multi-threaded environment.
