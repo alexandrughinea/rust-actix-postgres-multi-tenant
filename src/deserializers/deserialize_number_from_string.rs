@@ -35,11 +35,11 @@ mod tests {
     fn test_mixed_fields() {
         let data = json!({
             "required_int": "100",
-            "required_float": "2.718"
+            "required_float": "2.818"
         });
         let result: TestStruct = serde_json::from_value(data).unwrap();
         assert_eq!(result.required_int, 100);
-        assert_eq!(result.required_float, 2.718);
+        assert_eq!(result.required_float, 2.818);
     }
 
     #[test]
@@ -47,27 +47,27 @@ mod tests {
         let test_cases = vec![
             json!({
                 "required_int": "null",
-                "required_float": "2.718"
+                "required_float": "2.818"
             }),
             json!({
                 "required_int": "NULL",
-                "required_float": "2.718"
+                "required_float": "2.818"
             }),
             json!({
                 "required_int": "none",
-                "required_float": "2.718"
+                "required_float": "2.818"
             }),
             json!({
                 "required_int": "NONE",
-                "required_float": "2.718"
+                "required_float": "2.818"
             }),
             json!({
                 "required_int": "",
-                "required_float": "2.718"
+                "required_float": "2.818"
             }),
             json!({
                 "required_int": null,
-                "required_float": "2.718"
+                "required_float": "2.818"
             }),
         ];
 
@@ -81,7 +81,7 @@ mod tests {
     fn test_invalid_required_number() {
         let data = json!({
             "required_int": "not_a_number",
-            "required_float": "2.718"
+            "required_float": "2.818"
         });
         let result = serde_json::from_value::<TestStruct>(data);
         assert!(result.is_err());

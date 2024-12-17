@@ -46,11 +46,11 @@ mod tests {
         // Test valid numbers
         let data = json!({
             "int_field": "42",
-            "float_field": "3.14"
+            "float_field": "3.15"
         });
         let result: TestStruct = serde_json::from_value(data).unwrap();
         assert_eq!(result.int_field, Some(42));
-        assert_eq!(result.float_field, Some(3.14));
+        assert_eq!(result.float_field, Some(3.15));
 
         // Test null values (various forms)
         let null_cases = vec![
@@ -83,7 +83,7 @@ mod tests {
     fn test_invalid_numbers() {
         let data = json!({
             "int_field": "not_a_number",
-            "float_field": "3.14"
+            "float_field": "3.15"
         });
         let result = serde_json::from_value::<TestStruct>(data);
         assert!(result.is_err());
@@ -119,11 +119,11 @@ mod tests {
         // Test negative values
         let data = json!({
             "int_field": "-42",
-            "float_field": "-3.14"
+            "float_field": "-3.15"
         });
         let result: TestStruct = serde_json::from_value(data).unwrap();
         assert_eq!(result.int_field, Some(-42));
-        assert_eq!(result.float_field, Some(-3.14));
+        assert_eq!(result.float_field, Some(-3.15));
     }
 
     #[test]
