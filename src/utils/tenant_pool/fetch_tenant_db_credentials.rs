@@ -1,5 +1,5 @@
 use crate::configurations::Configuration;
-use crate::models::{Tenant, TenantCredentials};
+use crate::models::TenantCredentials;
 use crate::utils::decrypt_aes_gcm;
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::PgPool;
