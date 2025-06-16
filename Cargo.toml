@@ -16,8 +16,8 @@ actix-web = { version = "4.9", features = ["openssl"] }
 actix-session = { version = "0.10.1", features = [
     "cookie-session"
 ] }
-actix-cors = { version = "0.7" }
-sqlx = { version = "0.8", default-features = false, features = [
+actix-cors = { version = "0.7.1" }
+sqlx = { version = "0.8.6", default-features = false, features = [
     "runtime-tokio-rustls",
     "macros",
     "postgres",
@@ -26,12 +26,12 @@ sqlx = { version = "0.8", default-features = false, features = [
     "json",
     "migrate"
 ] }
-sqlx-paginated = { version = "0.2.29", features = ["postgres", "tracing"] }
-tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
-config = "0.15.6"
-uuid = { version = "1.12.0", features = ["v4", "serde"] }
-chrono = { version = "0.4.39", features = ["serde"] }
-serde = { version = "1.0.217", features = ["derive"] }
+sqlx-paginated = { version = "0.2.32", features = ["postgres", "tracing"] }
+config = { version = "0.15.11" }
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1.17.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.135"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = [
@@ -46,12 +46,9 @@ tracing-bunyan-formatter = "0.3.10"
 tracing-log = "0.2.0"
 tracing-actix-web = "0.7.15"
 secrecy = { version = "0.10.3", features = ["serde"] }
-argon2 = "0.5.3"
 anyhow = "1.0.95"
 thiserror = "2.0.11"
-hmac = "0.12.1"
 aes-gcm = "0.10.3"
 hex = "0.4.3"
-rand = "0.8.5"
-actix-web-validator = "6.0.0"
-validator = { version = "0.19.0", features = ["derive"] }
+rand = "0.9.1"
+validator = { version = "0.20.0", features = ["derive"] }

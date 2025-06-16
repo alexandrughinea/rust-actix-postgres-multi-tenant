@@ -1,8 +1,9 @@
 use crate::configurations::Configuration;
 use crate::migrations::run_migrations;
 use crate::models::AppState;
-use crate::routes::{health_check, internal};
+use crate::routes::{health_check, internal, public};
 use crate::utils::cleanup_idle_tenant_pools;
+use crate::utils::InternalNetworkGuard;
 use actix_cors::Cors;
 use actix_session::config::PersistentSession;
 use actix_session::storage::CookieSessionStore;
@@ -91,9 +92,7 @@ async fn run(
     let app_state_data = Data::new(AppState {
         pools: Arc::new(Mutex::new(HashMap::new())),
     });
-    // Database connection pool application state
     let database_pool_data = Data::new(db_pool);
-
     let server = HttpServer::new(move || {
         let hmac_secret_key = Key::from(configuration.secrets.hmac.expose_secret().as_bytes());
 
@@ -127,7 +126,7 @@ async fn run(
                 )
                 .build();
 
-        // Spawn a background task to clean up idle pools
+        let actix_internal_network_guard = InternalNetworkGuard::new();
         let state_clone = app_state_data.clone();
 
         tokio::spawn(async move {
@@ -148,8 +147,11 @@ async fn run(
             .wrap(actix_compress_middleware)
             .wrap(actix_cors_middleware)
             .route("/health_check", web::get().to(health_check))
+            .service(web::scope("/v1").configure(public::configure))
             .service(
-                web::scope("/v1").service(web::scope("/internal").configure(internal::configure)),
+                web::scope("/internal")
+                    .wrap(actix_internal_network_guard)
+                    .configure(internal::configure),
             )
             .wrap(TracingLogger::default())
     })

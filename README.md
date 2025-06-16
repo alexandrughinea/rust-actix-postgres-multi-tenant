@@ -1,10 +1,10 @@
-# Multi-Tenant Architecture template written in Rust for PostgreSQL
+# Scalable, Multi-Tenant Architecture template written in Rust for PostgreSQL
 Multi-threaded DB pool lifecycle management implementation is available in the source provided.
 
 [![Rust](https://github.com/alexandrughinea/rust-actix-postgres-multi-tenant/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/alexandrughinea/rust-actix-postgres-multi-tenant/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This project implements a blazingly fast (yes, really fast 🔥) multi-tenant connection pooling strategy for PostgreSQL using Rust.
+This project implements a relatively fast multi-tenant connection pooling strategy for PostgreSQL using Rust.
 It dynamically manages database connection pools for tenants based on their unique identifiers (UUIDs).
 The architecture leverages the use of `Arc` (Atomic Reference Counting), `Mutex`, and SQLx to ensure efficient, safe, and scalable connection management in a multi-threaded environment.
 

@@ -7,7 +7,7 @@ use rand::Rng;
 
 fn generate_nonce() -> [u8; 12] {
     let mut nonce = [0u8; 12];
-    rand::thread_rng().fill(&mut nonce);
+    rand::rng().fill(&mut nonce);
     nonce
 }
 
