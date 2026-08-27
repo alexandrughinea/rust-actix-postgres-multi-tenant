@@ -2,12 +2,10 @@ use crate::configurations::{Configuration, DatabaseConfiguration};
 use crate::models::{AppState, TenantPool};
 use crate::utils::fetch_tenant_db_credentials;
 use actix_web::HttpResponse;
-use chrono::Utc;
+use dashmap::mapref::entry::Entry::{Occupied, Vacant};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[tracing::instrument(
@@ -20,17 +18,10 @@ pub async fn get_pool_for_tenant(
     state: &AppState,
     pool: &PgPool,
     configuration: &Configuration,
-) -> Result<Arc<PgPool>, HttpResponse> {
-    let mut pools = state.pools.lock().await;
-    // Check if the tenant's pool already exists
-    if let Some(tenant_pool) = pools.get_mut(tenant_id) {
-        // Lock the Mutex to mutate the TenantPool
-        let mut tenant_pool = tenant_pool.lock().await;
-
-        // Mutate the last accessed (visited) time
-        tenant_pool.last_accessed = Utc::now();
-
-        return Ok(Arc::clone(&tenant_pool.pool));
+) -> Result<PgPool, HttpResponse> {
+    if let Some(existing) = state.pools.get(tenant_id) {
+        existing.touch();
+        return Ok(existing.pool.clone());
     }
 
     // Fetch credentials for the tenant's database
@@ -81,23 +72,30 @@ pub async fn get_pool_for_tenant(
         pool_options = pool_options.idle_timeout(Duration::from_secs(idle_timeout));
     }
 
-    let pool = pool_options
+    let new_pool = pool_options
         .connect_with(connect_options)
         .await
         .map_err(|_| {
             HttpResponse::InternalServerError().body("Failed to create dedicated tenant pool.")
         })?;
 
-    // Create a new `TenantPool` struct with the newly created pool (wrapped in an Arc)
-    let tenant_pool = Arc::new(Mutex::new(TenantPool {
-        pool: Arc::new(pool),
-        last_accessed: Utc::now(),
-    }));
+    let lost_race = {
+        match state.pools.entry(*tenant_id) {
+            Occupied(e) => {
+                e.get().touch();
+                Some(e.get().pool.clone())
+            }
+            Vacant(e) => {
+                e.insert(TenantPool::new(new_pool.clone()));
+                None
+            }
+        }
+    };
 
-    pools.insert(*tenant_id, Arc::clone(&tenant_pool));
-
-    // Lock the Mutex to access the pool
-    let tenant_pool = tenant_pool.lock().await;
-
-    Ok(Arc::clone(&tenant_pool.pool)) // Clone the Arc to return
+    if let Some(existing) = lost_race {
+        new_pool.close().await;
+        Ok(existing)
+    } else {
+        Ok(new_pool)
+    }
 }
