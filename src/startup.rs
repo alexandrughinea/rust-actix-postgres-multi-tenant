@@ -13,13 +13,11 @@ use actix_web::cookie::Key;
 use actix_web::dev::Server;
 use actix_web::web::Data;
 use actix_web::{http, web, HttpServer};
+use dashmap::DashMap;
 use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use std::collections::HashMap;
 use std::net::TcpListener;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use tokio::time;
 use tracing_actix_web::TracingLogger;
 
@@ -90,7 +88,7 @@ async fn run(
 ) -> Result<Server, std::io::Error> {
     let configuration_data = Data::new(configuration.clone());
     let app_state_data = Data::new(AppState {
-        pools: Arc::new(Mutex::new(HashMap::new())),
+        pools: DashMap::new(),
     });
     let database_pool_data = Data::new(db_pool);
     let server = HttpServer::new(move || {

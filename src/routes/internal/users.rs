@@ -1,9 +1,10 @@
 use crate::configurations::Configuration;
 use crate::models::{AppState, User};
+
 use crate::utils::{get_pool_for_tenant, get_tenant_id_from_request};
 use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::json;
-use sqlx::PgPool;
+use sqlx::{PgPool,Postgres};
 use sqlx_paginated::{paginated_query_as, FlatQueryParams};
 
 pub(crate) fn configure(cfg: &mut web::ServiceConfig) {
@@ -36,7 +37,7 @@ pub async fn create_user(
     )
     .bind(&user.first_name)
     .bind(&user.last_name)
-    .fetch_one(pool.as_ref())
+    .fetch_one(&pool)
     .await
     .unwrap();
 
@@ -59,7 +60,7 @@ pub async fn get_users(
         Err(e) => return e,
     };
 
-    let users = paginated_query_as!(User, "SELECT * FROM users")
+    let users = paginated_query_as!(User, Postgres, "SELECT * FROM users")
         .with_params(params)
         .fetch_paginated(&tenant_pool)
         .await
