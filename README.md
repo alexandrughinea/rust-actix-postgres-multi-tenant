@@ -6,7 +6,7 @@ Multi-threaded DB pool lifecycle management implementation is available in the s
 
 This project implements a relatively fast multi-tenant connection pooling strategy for PostgreSQL using Rust.
 It dynamically manages database connection pools for tenants based on their unique identifiers (UUIDs).
-The architecture leverages the use of `Arc` (Atomic Reference Counting), `Mutex`, and SQLx to ensure efficient, safe, and scalable connection management in a multi-threaded environment.
+The architecture uses a sharded `DashMap` of tenant pools and SQLx so lookups from different tenants do not serialize on a global lock.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -67,28 +67,30 @@ The architecture supports:
 - **Tenant-specific connection pooling**: A separate connection pool for each tenant, ensuring a good level of isolation between tenants.
 - **Efficient reuse of connections**: Pools are cached and reused to avoid repeatedly creating and tearing down connections.
 - **Pool eviction strategy**: Pools are evicted and cleaned up if they become stale by an automatic background task.
-- **Thread-safe management**: Using `Arc` and `Mutex` to ensure that connection pools can be accessed and modified safely in a multi-threaded environment, without cloning them.
+- **Concurrent map**: Tenant pools live in a sharded `DashMap`, so lookups for different tenants do not contend on a single mutex.
 
 ## Architecture
 
 ### Components
 
-- **`AppState`**: A global state shared across the application that holds all tenant connection pools in a thread-safe manner using a `Arc<Mutex<HashMap<Uuid, Arc<Mutex<TenantPool>>>>>`. This allows tenant-specific pools to be fetched, inserted, and updated safely. Each tenant can have their own credentials, and these pools are isolated from one another.
+- **`AppState`**: Shared application state. `pools` is a `DashMap<Uuid, TenantPool>` (aliased as `Pools`). `web::Data<AppState>` already wraps this in an `Arc`, so the map does not need another outer lock. Each tenant keeps its own credentials and its own `PgPool`.
 
-- **`TenantPool`**: A struct representing the connection pool for a specific tenant, along with some metadata such as the last time it was accessed. This metadata helps with our eviction policies if needed.
+- **`TenantPool`**: A tenant's `PgPool` plus an atomic Unix-second `last_accessed` timestamp (`touch` / `is_idle`). `PgPool` is already a cheap `Clone` (internally reference-counted), so it is not wrapped in an extra `Arc` or `Mutex`.
 
-- **PostgreSQL Pool (`PgPool`)**: The principal pool of database connections which initializes once with the application.
+- **PostgreSQL Pool (`PgPool`)**: The control-plane pool that starts with the application (migrations, tenant credential lookup). Per-tenant work uses the cached `TenantPool.pool`, not this one.
 
 ### Diagram
 
 ```mermaid
 classDiagram
     class AppState {
-        +Arc<Mutex<HashMap<Uuid, Arc<Mutex<TenantPool>>>>> pools
+        +Pools pools
     }
     class TenantPool {
-        +Arc<PgPool> pool
-        +DateTime<Utc> last_accessed
+        +PgPool pool
+        -AtomicI64 last_accessed
+        +touch()
+        +is_idle(idle_secs) bool
     }
     class Tenant {
         +Option<Uuid> id
@@ -114,13 +116,13 @@ classDiagram
     }
 
     AppState "1" *-- "*" TenantPool : contains
-    TenantPool --> "1" PgPool : contains reference to
+    TenantPool --> "1" PgPool : contains
     Tenant "1" -- "1" TenantCredentials : uses
     Tenant "1" -- "*" User : has
 
     %% Notes
-    note for AppState "Shared state with thread-safe access to tenant pools"
-    note for TenantPool "Represents a single tenant's database connection pool"
+    note for AppState "Shared DashMap of tenant pools"
+    note for TenantPool "Per-tenant PgPool plus atomic last-accessed timestamp"
     note for Tenant "Tenant information including database credentials"
     note for TenantCredentials "Separate struct for tenant's database credentials"
     note for User "User information associated with a tenant"
@@ -133,15 +135,14 @@ classDiagram
    - When a request is made on behalf of a tenant, the `tenant_id` (UUID) is extracted from the request.
 
 2. **Connection Pool Lookup**:
-   - The system checks if there is an existing connection pool for that tenant in the `AppState`. The pool is stored in a thread-safe `HashMap`, with the `tenant_id` as the key and an `Arc<Mutex<TenantPool>>` as the value.
+   - The system looks up the tenant in `AppState.pools` with `DashMap::get`. On a hit it calls `touch()` (atomic last-accessed) and returns a cloned `PgPool`. Unrelated tenants do not share a lock.
 
 3. **Pool Creation** (if not found):
-   - If no connection pool is found for the tenant, the system fetches tenant-specific database credentials and creates a new `PgPool`.
-   - The `PgPool` is stored inside a `TenantPool` struct, along with the `last_accessed` timestamp, and the entire `TenantPool` is stored inside an `Arc<Mutex<_>>` for safe access.
+   - Credentials are fetched and a new `PgPool` is connected **without** holding a map guard, so other tenants can keep looking up while this tenant is cold.
+   - The new pool is inserted with `DashMap::entry`. If another request won the race, the extra pool is closed and the existing one is used.
 
-4. **Safe Access and Mutation**:
-   - When accessing or modifying a `TenantPool`, the system uses `Mutex` locks to ensure safe concurrent access.
-   - The `last_accessed` field is updated whenever the tenant’s pool is retrieved, allowing optimizations such as evicting idle pools.
+4. **Idle cleanup**:
+   - A background task periodically `retain`s pools that are not `is_idle`. Dropping a map entry drops that tenant's `PgPool` once in-flight clones are gone.
 
 5. **Reusing Pools**:
    - Once a pool is created for a tenant, subsequent requests from that tenant reuse the same pool, avoiding the overhead of creating new connections repeatedly.
@@ -152,7 +153,7 @@ classDiagram
 - The architecture ensures that connections to tenant databases are pooled and reused. Each tenant gets its own `PgPool`, and the pool is created only when needed, reducing overhead.
 
 ### 2. **Scalability**:
-- By using `Arc` to share ownership and `Mutex` for thread-safe access, this system can scale across multiple threads, allowing safe concurrent requests to access and modify tenant pools.
+- Lookups for different tenants run concurrently on the sharded map; a cold connect no longer blocks every other tenant. The practical ceiling is Postgres itself: each cached tenant holds its own `PgPool` (2–4 connections in the default config), so connection count grows with live pools, not with DashMap contention.
 
 ### 3. **Optimized Resource Usage**:
 - The architecture reduces the cost of frequently opening and closing database connections by keeping idle connections around for a specified amount of time (configurable using the `idle_timeout` setting).
@@ -161,7 +162,7 @@ classDiagram
 - Each tenant’s database pool is isolated, ensuring that tenants don’t interfere with one another’s connections. This is crucial for maintaining security and data integrity in multi-tenant systems.
 
 ### 5. **Cache Management**:
-- The `last_accessed` timestamp for each pool allows the system to track activity and potentially implement strategies like idle pool eviction or pool timeouts, further improving resource management.
+- `touch()` / `is_idle()` drive idle eviction: unused pools are dropped from the map on a timer so connection slots go back to Postgres.
 
 ## Documentation
 
